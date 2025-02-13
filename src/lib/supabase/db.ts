@@ -184,27 +184,42 @@ export async function getChatMessages(
 }
 
 export const updateUserScore = async (userId: string): Promise<void> => {
-  const { error } = await supabase.from("user_scores").upsert({
-    user_id: userId,
-    correct_answers: supabase.rpc("increment_score"),
-    updated_at: new Date().toISOString(),
-  });
-
-  if (error) throw error;
-};
-
-export const initializeUserScore = async (userId: string): Promise<void> => {
   try {
     const { error } = await supabase.from("user_scores").upsert(
       {
         user_id: userId,
-        correct_answers: 0,
+        correct_answers: supabase.rpc("increment_score"),
         updated_at: new Date().toISOString(),
       },
-      { onConflict: "user_id" }
+      {
+        onConflict: "user_id",
+      }
     );
 
     if (error) throw error;
+  } catch (error) {
+    console.error("Error updating user score:", error);
+    throw error;
+  }
+};
+
+export const initializeUserScore = async (userId: string): Promise<void> => {
+  try {
+    const { data: existingScore } = await supabase
+      .from("user_scores")
+      .select("id")
+      .eq("user_id", userId)
+      .single();
+
+    if (!existingScore) {
+      const { error } = await supabase.from("user_scores").insert({
+        user_id: userId,
+        correct_answers: 0,
+        updated_at: new Date().toISOString(),
+      });
+
+      if (error) throw error;
+    }
   } catch (error) {
     console.error("Error initializing user score:", error);
     throw error;

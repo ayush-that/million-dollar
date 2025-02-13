@@ -334,59 +334,80 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
 
         scrollToTop();
         setIsLoading(true);
+        setShowInitialSearch(false);
 
-        if (!currentSessionId) {
+        // Create a new chat session first
+        let sessionId = currentSessionId;
+        if (!sessionId) {
           const session = await createChatSession(user.id, query);
           if (session) {
+            sessionId = session.id;
             setCurrentSessionId(session.id);
             setSessions((prev) => [session, ...prev]);
           }
         }
 
-        if (currentSessionId) {
-          const userMessage = {
-            type: "user" as const,
-            content: query,
-          };
-          await saveChatMessage(user.id, currentSessionId, userMessage);
-          setMessages((prev) => [...prev, userMessage]);
+        // Save user's message
+        const userMessage = {
+          type: "user" as const,
+          content: query,
+        };
+
+        if (sessionId) {
+          await saveChatMessage(user.id, sessionId, userMessage);
         }
+        setMessages((prev) => [...prev, userMessage]);
 
-        setShowInitialSearch(false);
-
+        // Stream the AI response
         await gptService.streamExploreContent(
           query,
           userContext,
           async (chunk: StreamChunk) => {
-            if (chunk.text) {
+            if (chunk.text || chunk.topics || chunk.questions) {
               const aiMessage = {
                 type: "ai" as const,
-                content: chunk.text,
+                content: chunk.text || "",
                 topics: chunk.topics,
                 questions: chunk.questions,
               };
 
               setMessages((prev) => {
                 const newMessages = [...prev];
-                if (
-                  newMessages.length > 0 &&
-                  newMessages[newMessages.length - 1].type === "ai"
-                ) {
-                  newMessages[newMessages.length - 1] = aiMessage;
+                const lastMessage = newMessages[newMessages.length - 1];
+
+                if (lastMessage && lastMessage.type === "ai") {
+                  // Update existing AI message
+                  newMessages[newMessages.length - 1] = {
+                    ...lastMessage,
+                    content: chunk.text || lastMessage.content || "",
+                    topics: chunk.topics || lastMessage.topics,
+                    questions: chunk.questions || lastMessage.questions,
+                  };
                 } else {
+                  // Add new AI message
                   newMessages.push(aiMessage);
                 }
+
                 return newMessages;
               });
 
-              if (currentSessionId) {
-                await saveChatMessage(user.id, currentSessionId, aiMessage);
+              // Save the AI message to the database
+              if (
+                sessionId &&
+                (chunk.text || chunk.topics || chunk.questions)
+              ) {
+                await saveChatMessage(user.id, sessionId, {
+                  type: "ai",
+                  content: chunk.text || "",
+                  topics: chunk.topics,
+                  questions: chunk.questions,
+                });
               }
             }
           }
         );
 
-        loadChatSessions();
+        await loadChatSessions();
       } catch (error) {
         console.error("Search error:", error);
         onError(
@@ -458,7 +479,7 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
 
             <div className="w-full max-w-xl mx-auto">
               <SearchBar
-                onSearch={onSearch}
+                onSearch={handleSearch}
                 placeholder="Enter what you want to explore..."
                 centered={true}
                 className="bg-[#1a1a1a]/90 backdrop-blur-lg border border-[#2a2a2a] shadow-2xl"
@@ -471,7 +492,7 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
               <div className="flex flex-wrap items-center justify-center gap-2 mt-4">
                 <span className="text-sm text-gray-500">Try:</span>
                 <button
-                  onClick={() => onSearch("Quantum Physics")}
+                  onClick={() => handleSearch("Quantum Physics")}
                   className="px-3 py-1.5 rounded-lg bg-[#1a1a1a]/90 backdrop-blur-lg 
                     border border-purple-500/20 hover:border-purple-500/40 hover:bg-purple-500/10 
                     transition-all duration-200 text-xs sm:text-sm text-purple-300"
@@ -479,7 +500,7 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
                   ⚛️ Quantum Physics
                 </button>
                 <button
-                  onClick={() => onSearch("Machine Learning")}
+                  onClick={() => handleSearch("Machine Learning")}
                   className="px-3 py-1.5 rounded-lg bg-[#1a1a1a]/90 backdrop-blur-lg 
                     border border-blue-500/20 hover:border-blue-500/40 hover:bg-blue-500/10 
                     transition-all duration-200 text-xs sm:text-sm text-blue-300"
@@ -487,7 +508,7 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
                   🤖 Machine Learning
                 </button>
                 <button
-                  onClick={() => onSearch("World History")}
+                  onClick={() => handleSearch("World History")}
                   className="px-3 py-1.5 rounded-lg bg-[#1a1a1a]/90 backdrop-blur-lg 
                     border border-green-500/20 hover:border-green-500/40 hover:bg-green-500/10 
                     transition-all duration-200 text-xs sm:text-sm text-green-300"
@@ -504,7 +525,7 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
               className="absolute inset-0 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-800 
                 scrollbar-track-transparent pb-32"
             >
-              <div className="max-w-3xl mx-auto px-4 py-4">
+              <div className="max-w-3xl mx-auto px-4 py-8 sm:py-12">
                 <div className="space-y-4">
                   {messages.map((message, index) => (
                     <div key={`${index}-${message.content}`} className="w-full">
@@ -573,7 +594,7 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
                     <History className="w-5 h-5 text-gray-400" />
                   </button>
                   <SearchBar
-                    onSearch={onSearch}
+                    onSearch={handleSearch}
                     placeholder="Ask a follow-up question..."
                     centered={false}
                     className="bg-[#1a1a1a]/90 backdrop-blur-lg border border-[#2a2a2a] shadow-2xl h-10"

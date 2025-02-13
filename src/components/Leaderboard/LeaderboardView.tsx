@@ -42,7 +42,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
   }
 
   return (
-    <div className="w-full max-w-3xl mx-auto px-4">
+    <div className="w-full max-w-3xl mx-auto px-4 py-8 sm:py-12">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-2">
           <Trophy className="w-6 h-6 text-yellow-500" />
@@ -86,7 +86,8 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
                       "Anonymous User"}
                   </h3>
                   <span className="text-xs text-gray-500">
-                    Last active: {new Date(user.updated_at).toLocaleDateString()}
+                    Last active:{" "}
+                    {new Date(user.updated_at).toLocaleDateString()}
                   </span>
                 </div>
               </div>
@@ -100,15 +101,17 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
             </div>
           ))
         ) : (
-          <div className="text-center py-12 bg-[#1a1a1a]/90 backdrop-blur-lg 
-            border border-[#2a2a2a] rounded-lg">
+          <div
+            className="text-center py-12 bg-[#1a1a1a]/90 backdrop-blur-lg 
+            border border-[#2a2a2a] rounded-lg"
+          >
             <Trophy className="w-12 h-12 text-gray-600 mx-auto mb-3" />
             <h3 className="text-lg font-medium text-gray-300 mb-2">
               No Scores Yet
             </h3>
             <p className="text-sm text-gray-500 max-w-md mx-auto">
-              Start practicing in the Playground to see your name on the leaderboard!
-              Answer questions correctly to climb the ranks.
+              Start practicing in the Playground to see your name on the
+              leaderboard! Answer questions correctly to climb the ranks.
             </p>
           </div>
         )}

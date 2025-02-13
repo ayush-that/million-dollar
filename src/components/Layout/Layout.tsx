@@ -52,8 +52,8 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
             <div className="flex items-center h-full gap-2 sm:gap-3">
               {currentPath === "/explore" && (
                 <>
-                  {/* Mobile Sidebar Toggle */}
-                  <Sheet>
+                  {/* Mobile Sidebar Toggle - Remove this section */}
+                  {/* <Sheet>
                     <SheetTrigger asChild>
                       <button className="p-1.5 sm:p-2 hover:bg-[#2a2a2a]/90 rounded-lg transition-colors lg:hidden">
                         <Menu className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
@@ -76,7 +76,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
                         return child;
                       })}
                     </SheetContent>
-                  </Sheet>
+                  </Sheet> */}
                 </>
               )}
 
@@ -124,7 +124,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
             if (React.isValidElement(child) && currentPath === "/explore") {
               return React.cloneElement(
                 child as React.ReactElement<{ isSidebarOpen: boolean }>,
-                { isSidebarOpen }
+                { isSidebarOpen: false } // Always set to false for mobile
               );
             }
             return child;
