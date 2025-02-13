@@ -323,33 +323,36 @@ export const PlaygroundView: React.FC<PlaygroundViewProps> = ({
               onSearch={handleSearch}
               placeholder="Enter what you want to practice..."
               centered={true}
-              className="bg-gray-900/80"
+              className="bg-[#1a1a1a]/90 backdrop-blur-lg border border-[#2a2a2a] shadow-2xl"
             />
 
-            <p className="text-sm text-gray-400 text-center mt-1">
+            <p className="text-sm text-gray-500 text-center mt-1">
               Press Enter to search
             </p>
 
-            <div className="flex flex-wrap items-center justify-center gap-2 mt-2">
-              <span className="text-sm text-gray-400">Try:</span>
+            <div className="flex flex-wrap items-center justify-center gap-2 mt-4">
+              <span className="text-sm text-gray-500">Try:</span>
               <button
                 onClick={() => handleSearch("Quantum Physics")}
-                className="px-3 py-1.5 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 
-                  border border-purple-500/30 transition-colors text-xs sm:text-sm text-purple-300"
+                className="px-3 py-1.5 rounded-lg bg-[#1a1a1a]/90 backdrop-blur-lg 
+                  border border-purple-500/20 hover:border-purple-500/40 hover:bg-purple-500/10 
+                  transition-all duration-200 text-xs sm:text-sm text-purple-300"
               >
                 ⚛️ Quantum Physics
               </button>
               <button
                 onClick={() => handleSearch("Machine Learning")}
-                className="px-3 py-1.5 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 
-                  border border-blue-500/30 transition-colors text-xs sm:text-sm text-blue-300"
+                className="px-3 py-1.5 rounded-lg bg-[#1a1a1a]/90 backdrop-blur-lg 
+                  border border-blue-500/20 hover:border-blue-500/40 hover:bg-blue-500/10 
+                  transition-all duration-200 text-xs sm:text-sm text-blue-300"
               >
                 🤖 Machine Learning
               </button>
               <button
                 onClick={() => handleSearch("World History")}
-                className="px-3 py-1.5 rounded-lg bg-green-500/20 hover:bg-green-500/30 
-                  border border-green-500/30 transition-colors text-xs sm:text-sm text-green-300"
+                className="px-3 py-1.5 rounded-lg bg-[#1a1a1a]/90 backdrop-blur-lg 
+                  border border-green-500/20 hover:border-green-500/40 hover:bg-green-500/10 
+                  transition-all duration-200 text-xs sm:text-sm text-green-300"
               >
                 🌍 World History
               </button>
@@ -359,7 +362,7 @@ export const PlaygroundView: React.FC<PlaygroundViewProps> = ({
       ) : (
         <div className="w-full max-w-3xl mx-auto px-4">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mt-2">
-            <div className="card">
+            <div className="bg-[#1a1a1a]/90 backdrop-blur-lg border border-[#2a2a2a] p-3 rounded-lg">
               <div className="flex items-center gap-2 text-primary">
                 <Trophy className="w-5 h-5" />
                 <span className="text-sm font-medium">Score</span>
@@ -369,38 +372,36 @@ export const PlaygroundView: React.FC<PlaygroundViewProps> = ({
               </div>
             </div>
 
-            <div className="card">
+            <div className="bg-[#1a1a1a]/90 backdrop-blur-lg border border-[#2a2a2a] p-3 rounded-lg">
               <div className="flex items-center justify-between">
-                <span className="stats-value text-xs sm:text-base text-primary">
+                <span className="text-xs sm:text-base text-primary">
                   {stats.questions}
                 </span>
                 <Target className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
               </div>
-              <span className="stats-label text-xs sm:text-sm">Questions</span>
+              <span className="text-xs sm:text-sm text-gray-500">
+                Questions
+              </span>
             </div>
 
-            <div className="card">
+            <div className="bg-[#1a1a1a]/90 backdrop-blur-lg border border-[#2a2a2a] p-3 rounded-lg">
               <div className="flex items-center justify-between">
-                <span className="stats-value text-yellow-500">
-                  {stats.streak}
-                </span>
+                <span className="text-yellow-500">{stats.streak}</span>
                 <Award className="w-5 h-5 text-yellow-500" />
               </div>
-              <span className="stats-label">Streak</span>
+              <span className="text-gray-500 text-xs sm:text-sm">Streak</span>
             </div>
 
-            <div className="card">
+            <div className="bg-[#1a1a1a]/90 backdrop-blur-lg border border-[#2a2a2a] p-3 rounded-lg">
               <div className="flex items-center justify-between">
-                <span className="stats-value text-purple-500">
-                  {currentQuestionTime}s
-                </span>
+                <span className="text-purple-500">{currentQuestionTime}s</span>
                 <Timer className="w-5 h-5 text-purple-500" />
               </div>
-              <span className="stats-label">Time</span>
+              <span className="text-gray-500 text-xs sm:text-sm">Time</span>
             </div>
           </div>
 
-          <div className="card flex-1 flex flex-col mt-4">
+          <div className="mt-6">
             <div className="flex justify-between items-start">
               <h2
                 className="text-xs sm:text-base font-medium leading-relaxed 
@@ -410,7 +411,7 @@ export const PlaygroundView: React.FC<PlaygroundViewProps> = ({
               </h2>
               <button
                 onClick={togglePause}
-                className="p-2 rounded-lg hover:bg-gray-800 transition-colors flex-shrink-0"
+                className="p-2 rounded-lg hover:bg-[#2a2a2a]/90 transition-colors flex-shrink-0"
               >
                 {isPaused ? (
                   <Play className="w-5 h-5 text-primary" />
@@ -420,7 +421,7 @@ export const PlaygroundView: React.FC<PlaygroundViewProps> = ({
               </button>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-2 mt-4">
               {currentQuestion?.options?.map((option: string, idx: number) => (
                 <button
                   key={idx}
@@ -429,13 +430,13 @@ export const PlaygroundView: React.FC<PlaygroundViewProps> = ({
                   className={`w-full text-left px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg 
                     text-xs sm:text-sm leading-relaxed ${
                       selectedAnswer === null
-                        ? "bg-card hover:bg-gray-800"
+                        ? "bg-[#1a1a1a]/90 hover:bg-[#2a2a2a]/90 border border-[#2a2a2a]"
                         : idx === currentQuestion.correctAnswer
-                        ? "bg-green-500/20 text-green-500"
+                        ? "bg-green-500/10 border border-green-500/20 text-green-400"
                         : selectedAnswer === idx
-                        ? "bg-red-500/20 text-red-500"
-                        : "bg-card"
-                    }`}
+                        ? "bg-red-500/10 border border-red-500/20 text-red-400"
+                        : "bg-[#1a1a1a]/90 border border-[#2a2a2a]"
+                    } transition-all duration-200`}
                 >
                   <span className="inline-block w-5 sm:w-6 font-medium">
                     {String.fromCharCode(65 + idx)}.
@@ -449,7 +450,7 @@ export const PlaygroundView: React.FC<PlaygroundViewProps> = ({
               <div className="mt-3 space-y-2 text-sm">
                 {!isPaused && nextQuestionCountdown !== null && (
                   <div className="mb-2">
-                    <div className="relative h-1 bg-gray-700 rounded-full overflow-hidden">
+                    <div className="relative h-1 bg-[#2a2a2a] rounded-full overflow-hidden">
                       <div
                         className="absolute inset-y-0 left-0 bg-primary transition-all duration-100"
                         style={{
@@ -459,7 +460,7 @@ export const PlaygroundView: React.FC<PlaygroundViewProps> = ({
                         }}
                       />
                     </div>
-                    <div className="mt-1 text-xs text-gray-400 text-center">
+                    <div className="mt-1 text-xs text-gray-500 text-center">
                       Next question in {nextQuestionCountdown.toFixed(0)}s
                     </div>
                   </div>
@@ -468,8 +469,8 @@ export const PlaygroundView: React.FC<PlaygroundViewProps> = ({
                 <div
                   className={`px-3 py-2 rounded-lg ${
                     selectedAnswer === currentQuestion.correctAnswer
-                      ? "bg-green-500/20 text-green-500"
-                      : "bg-red-500/20 text-red-500"
+                      ? "bg-green-500/10 border border-green-500/20"
+                      : "bg-red-500/10 border border-red-500/20"
                   }`}
                 >
                   <div className="flex items-start gap-2">

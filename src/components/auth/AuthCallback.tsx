@@ -1,23 +1,23 @@
 import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useRouter } from "@tanstack/react-router";
 import { supabase } from "../../lib/supabase/client";
 
 export const AuthCallback = () => {
-  const navigate = useNavigate();
+  const router = useRouter();
 
   useEffect(() => {
     const handleAuthCallback = async () => {
       const { error } = await supabase.auth.getSession();
       if (error) {
         console.error("Error during auth callback:", error);
-        navigate("/login");
+        router.navigate({ to: "/login" });
       } else {
-        navigate("/");
+        router.navigate({ to: "/explore" });
       }
     };
 
     handleAuthCallback();
-  }, [navigate]);
+  }, [router]);
 
   return (
     <div className="min-h-screen flex items-center justify-center">

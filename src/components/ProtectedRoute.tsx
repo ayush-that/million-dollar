@@ -1,5 +1,5 @@
 import React from "react";
-import { Navigate } from "react-router-dom";
+import { useRouter } from "@tanstack/react-router";
 import { useAuth } from "../lib/context/AuthContext";
 
 interface ProtectedRouteProps {
@@ -8,6 +8,7 @@ interface ProtectedRouteProps {
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const { user, loading } = useAuth();
+  const router = useRouter();
 
   if (loading) {
     return (
@@ -18,7 +19,8 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   }
 
   if (!user) {
-    return <Navigate to="/login" replace />;
+    router.navigate({ to: "/login" });
+    return null;
   }
 
   return <>{children}</>;

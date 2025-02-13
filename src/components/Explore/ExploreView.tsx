@@ -28,7 +28,7 @@ import {
 } from "../../lib/supabase/db";
 import { ChatHistory } from "./ChatHistory";
 import { Menu, History, Send } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useRouter } from "@tanstack/react-router";
 import { Button } from "@nextui-org/react";
 import { Sheet, SheetContent, SheetTrigger } from "../../components/ui/sheet";
 
@@ -66,6 +66,7 @@ interface ExploreViewProps {
   onError: (message: string) => void;
   onRelatedQueryClick?: (query: string) => void;
   userContext: UserContext;
+  isSidebarOpen?: boolean;
 }
 
 const MarkdownComponents: Record<string, React.FC<MarkdownComponentProps>> = {
@@ -219,9 +220,10 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
   onError,
   onRelatedQueryClick,
   userContext,
+  isSidebarOpen = true,
 }) => {
   const { user } = useAuth();
-  const navigate = useNavigate();
+  const router = useRouter();
   const [messages, setMessages] = useState<Message[]>([]);
   const [showInitialSearch, setShowInitialSearch] = useState(!initialQuery);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -231,7 +233,6 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(false);
-
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
   const scrollToTop = useCallback(() => {
@@ -257,6 +258,29 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
       loadChatSessions();
     }
   }, [user]);
+
+  useEffect(() => {
+    const handleResetExplore = () => {
+      setMessages([]);
+      setShowInitialSearch(true);
+      setCurrentSessionId(null);
+    };
+
+    const handleLoadSession = (event: CustomEvent<{ sessionId: string }>) => {
+      loadChatSession(event.detail.sessionId);
+    };
+
+    window.addEventListener("resetExplore", handleResetExplore);
+    window.addEventListener("loadSession", handleLoadSession as EventListener);
+
+    return () => {
+      window.removeEventListener("resetExplore", handleResetExplore);
+      window.removeEventListener(
+        "loadSession",
+        handleLoadSession as EventListener
+      );
+    };
+  }, []);
 
   const loadChatSessions = async () => {
     if (!user) return;
@@ -370,101 +394,112 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
   }, [initialQuery, handleSearch]);
 
   if (!user) {
-    navigate("/login");
+    router.navigate({ to: "/login" });
     return null;
   }
 
   return (
-    <div className="flex h-screen">
-      {/* History Toggle Button */}
-      <Sheet>
-        <SheetTrigger asChild>
-          <button
-            className="fixed top-20 left-4 p-2 bg-gray-800/80 hover:bg-gray-700/80 
-              rounded-lg backdrop-blur-sm transition-colors z-40"
-          >
-            <Menu className="w-5 h-5 text-gray-400" />
-          </button>
-        </SheetTrigger>
-        <SheetContent
-          side="left"
-          className="w-[320px] p-0 bg-gray-900/95 backdrop-blur-lg border-gray-800"
-        >
-          <ChatHistory
-            sessions={sessions}
-            currentSessionId={currentSessionId}
-            onSessionSelect={(id) => {
-              loadChatSession(id);
-              setShowHistory(false);
-            }}
-            onNewChat={() => {
-              handleNewChat();
-              setShowHistory(false);
-            }}
-            onClose={() => setShowHistory(false)}
-          />
-        </SheetContent>
-      </Sheet>
+    <div className="fixed inset-0 flex">
+      {/* Permanent Sidebar */}
+      <div
+        className={`fixed left-0 top-14 bottom-0 w-[320px] border-r border-[#2a2a2a] 
+          bg-[#1a1a1a]/95 backdrop-blur-lg hidden lg:block z-30 transition-transform duration-300
+          ${isSidebarOpen ? "translate-x-0" : "-translate-x-[320px]"}`}
+      >
+        <ChatHistory
+          sessions={sessions}
+          currentSessionId={currentSessionId}
+          onSessionSelect={(id) => {
+            loadChatSession(id);
+            setShowHistory(false);
+          }}
+          onNewChat={() => {
+            handleNewChat();
+            setShowHistory(false);
+          }}
+          className=""
+        />
+      </div>
+
+      {/* Mobile Sidebar Content */}
+      <div className="lg:hidden">
+        <ChatHistory
+          sessions={sessions}
+          currentSessionId={currentSessionId}
+          onSessionSelect={(id) => {
+            loadChatSession(id);
+            setShowHistory(false);
+          }}
+          onNewChat={() => {
+            handleNewChat();
+            setShowHistory(false);
+          }}
+          className="h-full"
+        />
+      </div>
 
       {/* Main Content */}
-      <div className="flex-1">
-        <div
-          className="w-full min-h-[calc(100vh-4rem)] flex flex-col"
-          ref={containerRef}
-        >
-          {showInitialSearch ? (
-            <div className="flex-1 flex flex-col items-center justify-center px-4">
-              <h1 className="text-2xl sm:text-3xl font-thin text-center font-instrument">
-                What do you want to <span className="italic">explore</span>?
-              </h1>
+      <div
+        className={`flex-1 flex flex-col h-[calc(100vh-3.5rem)] mt-14 transition-all duration-300
+          ${isSidebarOpen ? "lg:ml-[320px]" : "lg:ml-0"}`}
+      >
+        {showInitialSearch ? (
+          <div className="flex-1 flex flex-col items-center justify-center px-4 -ml-[160px]">
+            <h1 className="text-2xl sm:text-3xl font-thin text-center font-instrument">
+              What do you want to <span className="italic">explore</span>?
+            </h1>
 
-              <div className="w-full max-w-xl mx-auto">
-                <SearchBar
-                  onSearch={handleSearch}
-                  placeholder="Enter what you want to explore..."
-                  centered={true}
-                  className="bg-gray-900/80"
-                />
+            <div className="w-full max-w-xl mx-auto">
+              <SearchBar
+                onSearch={handleSearch}
+                placeholder="Enter what you want to explore..."
+                centered={true}
+                className="bg-[#1a1a1a]/90 backdrop-blur-lg border border-[#2a2a2a] shadow-2xl"
+              />
 
-                <p className="text-sm text-gray-400 text-center mt-1">
-                  Press Enter to search
-                </p>
+              <p className="text-sm text-gray-500 text-center mt-1">
+                Press Enter to search
+              </p>
 
-                <div className="flex flex-wrap items-center justify-center gap-2 mt-2">
-                  <span className="text-sm text-gray-400">Try:</span>
-                  <button
-                    onClick={() => handleSearch("Quantum Physics")}
-                    className="px-3 py-1.5 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 
-                      border border-purple-500/30 transition-colors text-xs sm:text-sm text-purple-300"
-                  >
-                    ⚛️ Quantum Physics
-                  </button>
-                  <button
-                    onClick={() => handleSearch("Machine Learning")}
-                    className="px-3 py-1.5 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 
-                      border border-blue-500/30 transition-colors text-xs sm:text-sm text-blue-300"
-                  >
-                    🤖 Machine Learning
-                  </button>
-                  <button
-                    onClick={() => handleSearch("World History")}
-                    className="px-3 py-1.5 rounded-lg bg-green-500/20 hover:bg-green-500/30 
-                      border border-green-500/30 transition-colors text-xs sm:text-sm text-green-300"
-                  >
-                    🌍 World History
-                  </button>
-                </div>
+              <div className="flex flex-wrap items-center justify-center gap-2 mt-4">
+                <span className="text-sm text-gray-500">Try:</span>
+                <button
+                  onClick={() => handleSearch("Quantum Physics")}
+                  className="px-3 py-1.5 rounded-lg bg-[#1a1a1a]/90 backdrop-blur-lg 
+                    border border-purple-500/20 hover:border-purple-500/40 hover:bg-purple-500/10 
+                    transition-all duration-200 text-xs sm:text-sm text-purple-300"
+                >
+                  ⚛️ Quantum Physics
+                </button>
+                <button
+                  onClick={() => handleSearch("Machine Learning")}
+                  className="px-3 py-1.5 rounded-lg bg-[#1a1a1a]/90 backdrop-blur-lg 
+                    border border-blue-500/20 hover:border-blue-500/40 hover:bg-blue-500/10 
+                    transition-all duration-200 text-xs sm:text-sm text-blue-300"
+                >
+                  🤖 Machine Learning
+                </button>
+                <button
+                  onClick={() => handleSearch("World History")}
+                  className="px-3 py-1.5 rounded-lg bg-[#1a1a1a]/90 backdrop-blur-lg 
+                    border border-green-500/20 hover:border-green-500/40 hover:bg-green-500/10 
+                    transition-all duration-200 text-xs sm:text-sm text-green-300"
+                >
+                  🌍 World History
+                </button>
               </div>
             </div>
-          ) : (
+          </div>
+        ) : (
+          <div className="relative flex-1">
             <div
               ref={messagesContainerRef}
-              className="relative flex flex-col w-full"
+              className="absolute inset-0 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-800 scrollbar-track-transparent"
             >
-              <div className="space-y-2 pb-16">
-                {messages.map((message, index) => (
-                  <div key={index} className="px-2 sm:px-4 w-full mx-auto">
-                    <div className="max-w-3xl mx-auto">
+              <div className="max-w-3xl mx-auto px-4 pb-24">
+                <div className="space-y-2">
+                  {messages.map((message, index) => (
+                    <div key={index} className="w-full">
                       {message.type === "user" ? (
                         <div className="w-full">
                           <div className="flex-1 text-base sm:text-lg font-semibold text-gray-100">
@@ -514,42 +549,38 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
                         </div>
                       )}
                     </div>
-                  </div>
-                ))}
-                <div
-                  ref={messagesEndRef}
-                  className="h-8 w-full"
-                  aria-hidden="true"
-                />
-              </div>
-
-              <div
-                className="fixed bottom-12 left-0 right-0 bg-gradient-to-t from-background 
-                via-background to-transparent pb-1 pt-2 z-50"
-              >
-                <div className="w-full px-2 sm:px-4 max-w-3xl mx-auto">
-                  <div className="flex gap-2">
-                    <Button
-                      isIconOnly
-                      variant="flat"
-                      aria-label="Toggle History"
-                      className="bg-transparent hover:bg-gray-800"
-                      onClick={() => setShowHistory(!showHistory)}
-                    >
-                      <History className="w-5 h-5" />
-                    </Button>
-                    <SearchBar
-                      onSearch={handleSearch}
-                      placeholder="Ask a follow-up question..."
-                      centered={false}
-                      className="bg-gray-900/80 backdrop-blur-lg border border-gray-700/50 h-10"
-                    />
-                  </div>
+                  ))}
                 </div>
               </div>
             </div>
-          )}
-        </div>
+
+            {/* Bottom Search Bar */}
+            <div
+              className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-background 
+              via-background to-transparent pb-4 pt-6"
+            >
+              <div className="w-full px-4 max-w-3xl mx-auto">
+                <div className="flex gap-2">
+                  <Button
+                    isIconOnly
+                    variant="flat"
+                    aria-label="Toggle History"
+                    className="bg-transparent hover:bg-gray-800"
+                    onClick={() => setShowHistory(!showHistory)}
+                  >
+                    <History className="w-5 h-5" />
+                  </Button>
+                  <SearchBar
+                    onSearch={handleSearch}
+                    placeholder="Ask a follow-up question..."
+                    centered={false}
+                    className="bg-[#1a1a1a]/90 backdrop-blur-lg border border-[#2a2a2a] shadow-2xl h-10"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

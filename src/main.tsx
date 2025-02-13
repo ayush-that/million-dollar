@@ -1,11 +1,14 @@
 // src/main.tsx
-import React from 'react'
-import ReactDOM from 'react-dom/client'
-import App from './App.tsx'
-import './styles/globals.css'
+import React from "react";
+import ReactDOM from "react-dom/client";
+import App from "./App";
+import "./styles/globals.css";
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
+// Create root outside so we can use it for error handling too
+const root = ReactDOM.createRoot(document.getElementById("root")!);
+
+root.render(
   <React.StrictMode>
     <App />
-  </React.StrictMode>,
-)
+  </React.StrictMode>
+);

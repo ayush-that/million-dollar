@@ -1,18 +1,18 @@
-import { useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useEffect } from "react";
+import { useRouter } from "@tanstack/react-router";
 
 export const GoogleTagManager = () => {
-  const location = useLocation();
+  const router = useRouter();
 
   useEffect(() => {
     // Push the new route to dataLayer
     if (window.dataLayer) {
       window.dataLayer.push({
-        event: 'pageview',
-        page: location.pathname + location.search
+        event: "pageview",
+        page: router.state.location.pathname + router.state.location.search,
       });
     }
-  }, [location]);
+  }, [router.state.location]);
 
   return null;
-}; 
+};
