@@ -17,6 +17,20 @@ import { RelatedTopics } from "./RelatedTopics";
 import { RelatedQuestions } from "./RelatedQuestions";
 import { LoadingAnimation } from "../shared/LoadingAnimation";
 import { UserContext } from "../../types";
+import { useAuth } from "../../lib/context/AuthContext";
+import {
+  createChatSession,
+  getChatSessions,
+  getChatMessages,
+  saveChatMessage,
+  ChatSession,
+  ChatMessage as DBChatMessage,
+} from "../../lib/supabase/db";
+import { ChatHistory } from "./ChatHistory";
+import { Menu, History, Send } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Button } from "@nextui-org/react";
+import { Sheet, SheetContent, SheetTrigger } from "../../components/ui/sheet";
 
 interface Message {
   type: "user" | "ai";
@@ -206,81 +220,123 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
   onRelatedQueryClick,
   userContext,
 }) => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [messages, setMessages] = useState<Message[]>([]);
   const [showInitialSearch, setShowInitialSearch] = useState(!initialQuery);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const gptService = useMemo(() => new GPTService(), []);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [sessions, setSessions] = useState<ChatSession[]>([]);
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
+  const [showHistory, setShowHistory] = useState(false);
 
-  // Add a ref for the messages container
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
-  // More reliable scroll to top function
   const scrollToTop = useCallback(() => {
-    // First try window scroll
     window.scrollTo({ top: 0, behavior: "smooth" });
 
-    // Also try scrolling container if it exists
     if (messagesContainerRef.current) {
       messagesContainerRef.current.scrollTo({ top: 0, behavior: "smooth" });
     }
 
-    // Fallback with setTimeout to ensure scroll happens after render
     setTimeout(() => {
       window.scrollTo({ top: 0, behavior: "instant" });
     }, 100);
   }, []);
 
-  // Call scroll on any message change
   useEffect(() => {
     if (messages.length > 0) {
       scrollToTop();
     }
   }, [messages.length, scrollToTop]);
 
-  // Add effect to listen for reset
   useEffect(() => {
-    const handleReset = () => {
-      setMessages([]);
-      setShowInitialSearch(true);
-    };
+    if (user) {
+      loadChatSessions();
+    }
+  }, [user]);
 
-    window.addEventListener("resetExplore", handleReset);
-    return () => window.removeEventListener("resetExplore", handleReset);
-  }, []);
+  const loadChatSessions = async () => {
+    if (!user) return;
+    try {
+      const fetchedSessions = await getChatSessions(user.id);
+      setSessions(fetchedSessions);
+    } catch (error) {
+      console.error("Error loading chat sessions:", error);
+    }
+  };
+
+  const loadChatSession = async (sessionId: string) => {
+    if (!user) return;
+    const messages = await getChatMessages(sessionId);
+    setMessages(
+      messages.map((msg) => ({
+        type: msg.type,
+        content: msg.content,
+        topics: msg.topics,
+        questions: msg.questions,
+      }))
+    );
+    setShowInitialSearch(false);
+    setCurrentSessionId(sessionId);
+  };
+
+  const handleNewChat = () => {
+    setMessages([]);
+    setShowInitialSearch(true);
+    setCurrentSessionId(null);
+  };
 
   const handleSearch = useCallback(
     async (query: string) => {
+      if (!user) return;
+
       try {
         if (window.navigator.vibrate) {
           window.navigator.vibrate(50);
         }
 
-        // Scroll before starting the search
         scrollToTop();
-
         setIsLoading(true);
-        setMessages([
-          { type: "user", content: query },
-          { type: "ai", content: "" },
-        ]);
 
+        if (!currentSessionId) {
+          const session = await createChatSession(user.id, query);
+          if (session) {
+            setCurrentSessionId(session.id);
+            setSessions((prev) => [session, ...prev]);
+          }
+        }
+
+        if (currentSessionId) {
+          await saveChatMessage(user.id, currentSessionId, {
+            type: "user",
+            content: query,
+          });
+        }
+
+        setMessages((prev) => [...prev, { type: "user", content: query }]);
         setShowInitialSearch(false);
 
         await gptService.streamExploreContent(
           query,
           userContext,
-          (chunk: StreamChunk) => {
-            setMessages([
-              { type: "user", content: query },
-              {
-                type: "ai",
+          async (chunk: StreamChunk) => {
+            if (chunk.text) {
+              const aiMessage = {
+                type: "ai" as const,
                 content: chunk.text,
                 topics: chunk.topics,
                 questions: chunk.questions,
-              },
-            ]);
+              };
+
+              setMessages((prev) => [...prev.slice(0, -1), aiMessage]);
+
+              if (currentSessionId) {
+                await saveChatMessage(user.id, currentSessionId, aiMessage);
+              }
+            }
           }
         );
       } catch (error) {
@@ -292,12 +348,11 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
         setIsLoading(false);
       }
     },
-    [gptService, onError, userContext, scrollToTop]
+    [gptService, onError, userContext, scrollToTop, currentSessionId, user]
   );
 
   const handleRelatedQueryClick = useCallback(
     (query: string) => {
-      // Scroll before handling the click
       scrollToTop();
 
       if (onRelatedQueryClick) {
@@ -314,146 +369,188 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
     }
   }, [initialQuery, handleSearch]);
 
+  if (!user) {
+    navigate("/login");
+    return null;
+  }
+
   return (
-    <div
-      className="w-full min-h-[calc(100vh-4rem)] flex flex-col"
-      ref={containerRef}
-    >
-      {showInitialSearch ? (
-        <div className="flex-1 flex flex-col items-center justify-center px-4">
-          <h1 className="text-2xl sm:text-3xl font-thin text-center font-instrument">
-            What do you want to <span className="italic">explore</span>?
-          </h1>
-
-          <div className="w-full max-w-xl mx-auto">
-            <SearchBar
-              onSearch={handleSearch}
-              placeholder="Enter what you want to explore..."
-              centered={true}
-              className="bg-gray-900/80"
-            />
-
-            <p className="text-sm text-gray-400 text-center mt-1">
-              Press Enter to search
-            </p>
-
-            <div className="flex flex-wrap items-center justify-center gap-2 mt-2">
-              <span className="text-sm text-gray-400">Try:</span>
-              <button
-                onClick={() => handleSearch("Quantum Physics")}
-                className="px-3 py-1.5 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 
-                  border border-purple-500/30 transition-colors text-xs sm:text-sm text-purple-300"
-              >
-                ⚛️ Quantum Physics
-              </button>
-              <button
-                onClick={() => handleSearch("Machine Learning")}
-                className="px-3 py-1.5 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 
-                  border border-blue-500/30 transition-colors text-xs sm:text-sm text-blue-300"
-              >
-                🤖 Machine Learning
-              </button>
-              <button
-                onClick={() => handleSearch("World History")}
-                className="px-3 py-1.5 rounded-lg bg-green-500/20 hover:bg-green-500/30 
-                  border border-green-500/30 transition-colors text-xs sm:text-sm text-green-300"
-              >
-                🌍 World History
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : (
-        <div
-          ref={messagesContainerRef}
-          className="relative flex flex-col w-full"
+    <div className="flex h-screen">
+      {/* History Toggle Button */}
+      <Sheet>
+        <SheetTrigger asChild>
+          <button
+            className="fixed top-20 left-4 p-2 bg-gray-800/80 hover:bg-gray-700/80 
+              rounded-lg backdrop-blur-sm transition-colors z-40"
+          >
+            <Menu className="w-5 h-5 text-gray-400" />
+          </button>
+        </SheetTrigger>
+        <SheetContent
+          side="left"
+          className="w-[320px] p-0 bg-gray-900/95 backdrop-blur-lg border-gray-800"
         >
-          <div className="space-y-2 pb-16">
-            {messages.map((message, index) => (
-              <div key={index} className="px-2 sm:px-4 w-full mx-auto">
-                <div className="max-w-3xl mx-auto">
-                  {message.type === "user" ? (
-                    <div className="w-full">
-                      <div className="flex-1 text-base sm:text-lg font-semibold text-gray-100">
-                        {message.content}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="w-full">
-                      <div className="flex-1 min-w-0">
-                        {!message.content && isLoading ? (
-                          <div className="flex items-center space-x-2 py-2">
-                            <LoadingAnimation />
-                            <span className="text-sm text-gray-400">
-                              Thinking...
-                            </span>
-                          </div>
-                        ) : (
-                          <ReactMarkdown
-                            remarkPlugins={[remarkGfm, remarkMath]}
-                            rehypePlugins={[rehypeKatex]}
-                            components={{
-                              ...MarkdownComponents,
-                              p: ({ children }) => (
-                                <p
-                                  className="text-sm sm:text-base text-gray-300 my-1.5 leading-relaxed 
-                                  break-words"
-                                >
-                                  {children}
-                                </p>
-                              ),
-                            }}
-                            className="whitespace-pre-wrap break-words space-y-1.5"
-                          >
-                            {message.content || ""}
-                          </ReactMarkdown>
-                        )}
+          <ChatHistory
+            sessions={sessions}
+            currentSessionId={currentSessionId}
+            onSessionSelect={(id) => {
+              loadChatSession(id);
+              setShowHistory(false);
+            }}
+            onNewChat={() => {
+              handleNewChat();
+              setShowHistory(false);
+            }}
+            onClose={() => setShowHistory(false)}
+          />
+        </SheetContent>
+      </Sheet>
 
-                        {message.topics && message.topics.length > 0 && (
-                          <div className="mt-3">
-                            <RelatedTopics
-                              topics={message.topics}
-                              onTopicClick={handleRelatedQueryClick}
-                            />
-                          </div>
-                        )}
+      {/* Main Content */}
+      <div className="flex-1">
+        <div
+          className="w-full min-h-[calc(100vh-4rem)] flex flex-col"
+          ref={containerRef}
+        >
+          {showInitialSearch ? (
+            <div className="flex-1 flex flex-col items-center justify-center px-4">
+              <h1 className="text-2xl sm:text-3xl font-thin text-center font-instrument">
+                What do you want to <span className="italic">explore</span>?
+              </h1>
 
-                        {message.questions && message.questions.length > 0 && (
-                          <div className="mt-3">
-                            <RelatedQuestions
-                              questions={message.questions}
-                              onQuestionClick={handleRelatedQueryClick}
-                            />
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
+              <div className="w-full max-w-xl mx-auto">
+                <SearchBar
+                  onSearch={handleSearch}
+                  placeholder="Enter what you want to explore..."
+                  centered={true}
+                  className="bg-gray-900/80"
+                />
+
+                <p className="text-sm text-gray-400 text-center mt-1">
+                  Press Enter to search
+                </p>
+
+                <div className="flex flex-wrap items-center justify-center gap-2 mt-2">
+                  <span className="text-sm text-gray-400">Try:</span>
+                  <button
+                    onClick={() => handleSearch("Quantum Physics")}
+                    className="px-3 py-1.5 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 
+                      border border-purple-500/30 transition-colors text-xs sm:text-sm text-purple-300"
+                  >
+                    ⚛️ Quantum Physics
+                  </button>
+                  <button
+                    onClick={() => handleSearch("Machine Learning")}
+                    className="px-3 py-1.5 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 
+                      border border-blue-500/30 transition-colors text-xs sm:text-sm text-blue-300"
+                  >
+                    🤖 Machine Learning
+                  </button>
+                  <button
+                    onClick={() => handleSearch("World History")}
+                    className="px-3 py-1.5 rounded-lg bg-green-500/20 hover:bg-green-500/30 
+                      border border-green-500/30 transition-colors text-xs sm:text-sm text-green-300"
+                  >
+                    🌍 World History
+                  </button>
                 </div>
               </div>
-            ))}
-            <div
-              ref={messagesEndRef}
-              className="h-8 w-full"
-              aria-hidden="true"
-            />
-          </div>
-
-          <div
-            className="fixed bottom-12 left-0 right-0 bg-gradient-to-t from-background 
-            via-background to-transparent pb-1 pt-2 z-50"
-          >
-            <div className="w-full px-2 sm:px-4 max-w-3xl mx-auto">
-              <SearchBar
-                onSearch={handleSearch}
-                placeholder="Ask a follow-up question..."
-                centered={false}
-                className="bg-gray-900/80 backdrop-blur-lg border border-gray-700/50 h-10"
-              />
             </div>
-          </div>
+          ) : (
+            <div
+              ref={messagesContainerRef}
+              className="relative flex flex-col w-full"
+            >
+              <div className="space-y-2 pb-16">
+                {messages.map((message, index) => (
+                  <div key={index} className="px-2 sm:px-4 w-full mx-auto">
+                    <div className="max-w-3xl mx-auto">
+                      {message.type === "user" ? (
+                        <div className="w-full">
+                          <div className="flex-1 text-base sm:text-lg font-semibold text-gray-100">
+                            {message.content}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="w-full">
+                          <div className="flex-1 min-w-0">
+                            {!message.content && isLoading ? (
+                              <div className="flex items-center space-x-2 py-2">
+                                <LoadingAnimation />
+                                <span className="text-sm text-gray-400">
+                                  Thinking...
+                                </span>
+                              </div>
+                            ) : (
+                              <ReactMarkdown
+                                remarkPlugins={[remarkGfm, remarkMath]}
+                                rehypePlugins={[rehypeKatex]}
+                                components={MarkdownComponents}
+                                className="whitespace-pre-wrap break-words space-y-1.5"
+                              >
+                                {message.content || ""}
+                              </ReactMarkdown>
+                            )}
+
+                            {message.topics && message.topics.length > 0 && (
+                              <div className="mt-3">
+                                <RelatedTopics
+                                  topics={message.topics}
+                                  onTopicClick={handleRelatedQueryClick}
+                                />
+                              </div>
+                            )}
+
+                            {message.questions &&
+                              message.questions.length > 0 && (
+                                <div className="mt-3">
+                                  <RelatedQuestions
+                                    questions={message.questions}
+                                    onQuestionClick={handleRelatedQueryClick}
+                                  />
+                                </div>
+                              )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                <div
+                  ref={messagesEndRef}
+                  className="h-8 w-full"
+                  aria-hidden="true"
+                />
+              </div>
+
+              <div
+                className="fixed bottom-12 left-0 right-0 bg-gradient-to-t from-background 
+                via-background to-transparent pb-1 pt-2 z-50"
+              >
+                <div className="w-full px-2 sm:px-4 max-w-3xl mx-auto">
+                  <div className="flex gap-2">
+                    <Button
+                      isIconOnly
+                      variant="flat"
+                      aria-label="Toggle History"
+                      className="bg-transparent hover:bg-gray-800"
+                      onClick={() => setShowHistory(!showHistory)}
+                    >
+                      <History className="w-5 h-5" />
+                    </Button>
+                    <SearchBar
+                      onSearch={handleSearch}
+                      placeholder="Ask a follow-up question..."
+                      centered={false}
+                      className="bg-gray-900/80 backdrop-blur-lg border border-gray-700/50 h-10"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 };
