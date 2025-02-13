@@ -34,6 +34,13 @@ export interface ChatSession {
   title: string;
 }
 
+export interface UserScore {
+  id: string;
+  user_id: string;
+  correct_answers: number;
+  updated_at: string;
+}
+
 export async function getProfile(userId: string): Promise<Profile | null> {
   const { data, error } = await supabase
     .from("profiles")
@@ -86,7 +93,7 @@ export async function createChatSession(
       .from("chat_sessions")
       .insert({
         user_id: userId,
-        title,
+        title: title.substring(0, 100), // Limit title length
         last_message_at: new Date().toISOString(),
       })
       .select()
@@ -122,14 +129,8 @@ export async function saveChatMessage(
   message: Omit<ChatMessage, "id" | "user_id" | "created_at" | "session_id">
 ): Promise<ChatMessage | null> {
   try {
-    // Update the session's last_message_at
-    await supabase
-      .from("chat_sessions")
-      .update({ last_message_at: new Date().toISOString() })
-      .eq("id", sessionId);
-
-    // Save the message
-    const { data, error } = await supabase
+    // Start a transaction
+    const { data: messageData, error: messageError } = await supabase
       .from("chat_messages")
       .insert({
         user_id: userId,
@@ -142,8 +143,22 @@ export async function saveChatMessage(
       .select()
       .single();
 
-    if (error) throw error;
-    return data;
+    if (messageError) throw messageError;
+
+    // Update the session's last_message_at and title if it's the first message
+    const { error: sessionError } = await supabase
+      .from("chat_sessions")
+      .update({
+        last_message_at: new Date().toISOString(),
+        ...(message.type === "user"
+          ? { title: message.content.substring(0, 100) }
+          : {}),
+      })
+      .eq("id", sessionId);
+
+    if (sessionError) throw sessionError;
+
+    return messageData;
   } catch (err) {
     console.error("Error saving chat message:", err);
     return null;
@@ -167,3 +182,67 @@ export async function getChatMessages(
     return [];
   }
 }
+
+export const updateUserScore = async (userId: string): Promise<void> => {
+  const { error } = await supabase.from("user_scores").upsert({
+    user_id: userId,
+    correct_answers: supabase.rpc("increment_score"),
+    updated_at: new Date().toISOString(),
+  });
+
+  if (error) throw error;
+};
+
+export const initializeUserScore = async (userId: string): Promise<void> => {
+  try {
+    const { error } = await supabase.from("user_scores").upsert(
+      {
+        user_id: userId,
+        correct_answers: 0,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "user_id" }
+    );
+
+    if (error) throw error;
+  } catch (error) {
+    console.error("Error initializing user score:", error);
+    throw error;
+  }
+};
+
+export const getTopUsers = async (limit: number = 10): Promise<UserScore[]> => {
+  try {
+    // Get current user to ensure they have a score entry
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (user) {
+      await initializeUserScore(user.id).catch(console.error);
+    }
+
+    const { data, error } = await supabase
+      .from("user_scores")
+      .select(
+        `
+        id,
+        user_id,
+        correct_answers,
+        updated_at,
+        profiles:user_id (
+          username,
+          full_name,
+          avatar_url
+        )
+      `
+      )
+      .order("correct_answers", { ascending: false })
+      .limit(limit);
+
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error("Error in getTopUsers:", error);
+    return [];
+  }
+};

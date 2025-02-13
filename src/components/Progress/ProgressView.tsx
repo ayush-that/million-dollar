@@ -1,127 +1,133 @@
-import React from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Clock, Target, Brain, Trophy } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { useAuth } from "../../lib/context/AuthContext";
+import { LineChart, Target, Trophy, Timer, Award } from "lucide-react";
+import { getTopUsers, UserScore } from "../../lib/supabase/db";
+
+interface ProgressStats {
+  totalQuestions: number;
+  correctAnswers: number;
+  averageTime: number;
+  streak: number;
+  topics: { [key: string]: number };
+}
 
 export const ProgressView = () => {
+  const { user } = useAuth();
+  const [stats, setStats] = useState<ProgressStats>({
+    totalQuestions: 0,
+    correctAnswers: 0,
+    averageTime: 0,
+    streak: 0,
+    topics: {},
+  });
+  const [rank, setRank] = useState<number | null>(null);
+
+  useEffect(() => {
+    const loadStats = async () => {
+      if (!user) return;
+
+      try {
+        // Get user's rank from leaderboard
+        const topUsers = await getTopUsers(100); // Get top 100 to find user's rank
+        const userRank = topUsers.findIndex((u) => u.user_id === user.id) + 1;
+        setRank(userRank > 0 ? userRank : null);
+
+        // For now, using mock data - in a real app, fetch from your database
+        setStats({
+          totalQuestions: 50,
+          correctAnswers: 35,
+          averageTime: 45,
+          streak: 7,
+          topics: {
+            "Quantum Physics": 15,
+            "Machine Learning": 12,
+            "World History": 8,
+          },
+        });
+      } catch (error) {
+        console.error("Error loading progress stats:", error);
+      }
+    };
+
+    loadStats();
+  }, [user]);
+
   return (
-    <div className="container mx-auto px-4 py-6">
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <Card className="bg-[#1a1a1a]/60 border-[#2a2a2a]">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-200">
-              Today's Learning
-            </CardTitle>
-            <Clock className="h-4 w-4 text-gray-400" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-primary">2h 15m</div>
-            <p className="text-xs text-gray-400">+45m from yesterday</p>
-          </CardContent>
-        </Card>
+    <div className="w-full max-w-4xl mx-auto px-4 py-8">
+      {/* Stats Grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+        <div className="bg-[#1a1a1a]/90 backdrop-blur-lg border border-[#2a2a2a] p-4 rounded-lg">
+          <div className="flex items-center gap-2 text-primary mb-1">
+            <Target className="w-5 h-5" />
+            <span className="text-sm font-medium">Questions</span>
+          </div>
+          <div className="text-2xl font-semibold">{stats.totalQuestions}</div>
+          <div className="text-xs text-gray-500 mt-1">Total attempts</div>
+        </div>
 
-        <Card className="bg-[#1a1a1a]/60 border-[#2a2a2a]">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-200">
-              Daily Goal
-            </CardTitle>
-            <Target className="h-4 w-4 text-gray-400" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-primary">75%</div>
-            <p className="text-xs text-gray-400">1h 45m remaining</p>
-          </CardContent>
-        </Card>
+        <div className="bg-[#1a1a1a]/90 backdrop-blur-lg border border-[#2a2a2a] p-4 rounded-lg">
+          <div className="flex items-center gap-2 text-green-500 mb-1">
+            <Trophy className="w-5 h-5" />
+            <span className="text-sm font-medium">Correct</span>
+          </div>
+          <div className="text-2xl font-semibold">{stats.correctAnswers}</div>
+          <div className="text-xs text-gray-500 mt-1">
+            {((stats.correctAnswers / stats.totalQuestions) * 100).toFixed(1)}%
+            accuracy
+          </div>
+        </div>
 
-        <Card className="bg-[#1a1a1a]/60 border-[#2a2a2a]">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-200">
-              Topics Mastered
-            </CardTitle>
-            <Brain className="h-4 w-4 text-gray-400" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-primary">12</div>
-            <p className="text-xs text-gray-400">+2 this week</p>
-          </CardContent>
-        </Card>
+        <div className="bg-[#1a1a1a]/90 backdrop-blur-lg border border-[#2a2a2a] p-4 rounded-lg">
+          <div className="flex items-center gap-2 text-yellow-500 mb-1">
+            <Award className="w-5 h-5" />
+            <span className="text-sm font-medium">Streak</span>
+          </div>
+          <div className="text-2xl font-semibold">{stats.streak}</div>
+          <div className="text-xs text-gray-500 mt-1">Current streak</div>
+        </div>
 
-        <Card className="bg-[#1a1a1a]/60 border-[#2a2a2a]">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-200">
-              Current Streak
-            </CardTitle>
-            <Trophy className="h-4 w-4 text-gray-400" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-primary">7 days</div>
-            <p className="text-xs text-gray-400">Best: 15 days</p>
-          </CardContent>
-        </Card>
+        <div className="bg-[#1a1a1a]/90 backdrop-blur-lg border border-[#2a2a2a] p-4 rounded-lg">
+          <div className="flex items-center gap-2 text-purple-500 mb-1">
+            <Timer className="w-5 h-5" />
+            <span className="text-sm font-medium">Time</span>
+          </div>
+          <div className="text-2xl font-semibold">{stats.averageTime}s</div>
+          <div className="text-xs text-gray-500 mt-1">Average per question</div>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Todo List */}
-        <Card className="bg-[#1a1a1a]/60 border-[#2a2a2a] lg:col-span-1">
-          <CardHeader>
-            <CardTitle className="text-gray-200">Learning Tasks</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex gap-2 mb-4">
-              <Input
-                placeholder="Add a new task..."
-                className="bg-[#2a2a2a] border-[#3a3a3a] text-gray-200"
-              />
-              <Button
-                size="icon"
-                variant="outline"
-                className="border-[#3a3a3a]"
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
-            </div>
-            <ScrollArea className="h-[300px] pr-4">
-              <div className="space-y-2">
-                {[
-                  "Complete Quantum Physics module",
-                  "Practice Machine Learning exercises",
-                  "Review World History notes",
-                  "Take practice quiz",
-                ].map((task, i) => (
-                  <div
-                    key={i}
-                    className="flex items-center space-x-2 bg-[#2a2a2a]/40 p-2 rounded-lg"
-                  >
-                    <Checkbox id={`task-${i}`} />
-                    <label
-                      htmlFor={`task-${i}`}
-                      className="text-sm text-gray-300 flex-1"
-                    >
-                      {task}
-                    </label>
-                  </div>
-                ))}
+      {/* Topics Progress */}
+      <div className="bg-[#1a1a1a]/90 backdrop-blur-lg border border-[#2a2a2a] rounded-lg p-6">
+        <h2 className="text-lg font-semibold text-gray-200 mb-4">
+          Topics Mastery
+        </h2>
+        <div className="space-y-4">
+          {Object.entries(stats.topics).map(([topic, count]) => (
+            <div key={topic}>
+              <div className="flex justify-between items-center mb-1">
+                <span className="text-sm text-gray-300">{topic}</span>
+                <span className="text-sm text-gray-400">{count} questions</span>
               </div>
-            </ScrollArea>
-          </CardContent>
-        </Card>
-
-        {/* Learning Time Chart */}
-        <Card className="bg-[#1a1a1a]/60 border-[#2a2a2a] lg:col-span-2">
-          <CardHeader>
-            <CardTitle className="text-gray-200">Learning Activity</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[300px] flex items-center justify-center text-gray-400">
-              Chart will be implemented here
+              <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-primary rounded-full transition-all duration-500"
+                  style={{ width: `${(count / stats.totalQuestions) * 100}%` }}
+                />
+              </div>
             </div>
-          </CardContent>
-        </Card>
+          ))}
+        </div>
       </div>
+
+      {/* Rank Display */}
+      {rank && (
+        <div className="mt-6 text-center">
+          <div className="inline-block bg-[#1a1a1a]/90 backdrop-blur-lg border border-[#2a2a2a] rounded-lg px-6 py-3">
+            <span className="text-gray-400">Your Global Rank: </span>
+            <span className="text-xl font-semibold text-primary">#{rank}</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

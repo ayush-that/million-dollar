@@ -31,6 +31,7 @@ import { Menu, History, Send } from "lucide-react";
 import { useRouter } from "@tanstack/react-router";
 import { Button } from "@nextui-org/react";
 import { Sheet, SheetContent, SheetTrigger } from "../../components/ui/sheet";
+import { Spinner } from "@nextui-org/react";
 
 interface Message {
   type: "user" | "ai";
@@ -67,6 +68,8 @@ interface ExploreViewProps {
   onRelatedQueryClick?: (query: string) => void;
   userContext: UserContext;
   isSidebarOpen?: boolean;
+  isSheet?: boolean;
+  onSearch: (query: string) => void;
 }
 
 const MarkdownComponents: Record<string, React.FC<MarkdownComponentProps>> = {
@@ -221,6 +224,8 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
   onRelatedQueryClick,
   userContext,
   isSidebarOpen = true,
+  isSheet = false,
+  onSearch,
 }) => {
   const { user } = useAuth();
   const router = useRouter();
@@ -294,17 +299,22 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
 
   const loadChatSession = async (sessionId: string) => {
     if (!user) return;
-    const messages = await getChatMessages(sessionId);
-    setMessages(
-      messages.map((msg) => ({
-        type: msg.type,
-        content: msg.content,
-        topics: msg.topics,
-        questions: msg.questions,
-      }))
-    );
-    setShowInitialSearch(false);
-    setCurrentSessionId(sessionId);
+    try {
+      const messages = await getChatMessages(sessionId);
+      setMessages(
+        messages.map((msg) => ({
+          type: msg.type,
+          content: msg.content,
+          topics: msg.topics,
+          questions: msg.questions,
+        }))
+      );
+      setShowInitialSearch(false);
+      setCurrentSessionId(sessionId);
+    } catch (error) {
+      console.error("Error loading chat session:", error);
+      onError("Failed to load chat session");
+    }
   };
 
   const handleNewChat = () => {
@@ -334,13 +344,14 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
         }
 
         if (currentSessionId) {
-          await saveChatMessage(user.id, currentSessionId, {
-            type: "user",
+          const userMessage = {
+            type: "user" as const,
             content: query,
-          });
+          };
+          await saveChatMessage(user.id, currentSessionId, userMessage);
+          setMessages((prev) => [...prev, userMessage]);
         }
 
-        setMessages((prev) => [...prev, { type: "user", content: query }]);
         setShowInitialSearch(false);
 
         await gptService.streamExploreContent(
@@ -355,7 +366,18 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
                 questions: chunk.questions,
               };
 
-              setMessages((prev) => [...prev.slice(0, -1), aiMessage]);
+              setMessages((prev) => {
+                const newMessages = [...prev];
+                if (
+                  newMessages.length > 0 &&
+                  newMessages[newMessages.length - 1].type === "ai"
+                ) {
+                  newMessages[newMessages.length - 1] = aiMessage;
+                } else {
+                  newMessages.push(aiMessage);
+                }
+                return newMessages;
+              });
 
               if (currentSessionId) {
                 await saveChatMessage(user.id, currentSessionId, aiMessage);
@@ -363,6 +385,8 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
             }
           }
         );
+
+        loadChatSessions();
       } catch (error) {
         console.error("Search error:", error);
         onError(
@@ -421,37 +445,20 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
         />
       </div>
 
-      {/* Mobile Sidebar Content */}
-      <div className="lg:hidden">
-        <ChatHistory
-          sessions={sessions}
-          currentSessionId={currentSessionId}
-          onSessionSelect={(id) => {
-            loadChatSession(id);
-            setShowHistory(false);
-          }}
-          onNewChat={() => {
-            handleNewChat();
-            setShowHistory(false);
-          }}
-          className="h-full"
-        />
-      </div>
-
       {/* Main Content */}
       <div
         className={`flex-1 flex flex-col h-[calc(100vh-3.5rem)] mt-14 transition-all duration-300
           ${isSidebarOpen ? "lg:ml-[320px]" : "lg:ml-0"}`}
       >
         {showInitialSearch ? (
-          <div className="flex-1 flex flex-col items-center justify-center px-4 -ml-[160px]">
-            <h1 className="text-2xl sm:text-3xl font-thin text-center font-instrument">
+          <div className="flex-1 flex flex-col items-center justify-center px-4">
+            <h1 className="text-2xl sm:text-3xl font-thin text-center font-instrument mb-8">
               What do you want to <span className="italic">explore</span>?
             </h1>
 
             <div className="w-full max-w-xl mx-auto">
               <SearchBar
-                onSearch={handleSearch}
+                onSearch={onSearch}
                 placeholder="Enter what you want to explore..."
                 centered={true}
                 className="bg-[#1a1a1a]/90 backdrop-blur-lg border border-[#2a2a2a] shadow-2xl"
@@ -464,7 +471,7 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
               <div className="flex flex-wrap items-center justify-center gap-2 mt-4">
                 <span className="text-sm text-gray-500">Try:</span>
                 <button
-                  onClick={() => handleSearch("Quantum Physics")}
+                  onClick={() => onSearch("Quantum Physics")}
                   className="px-3 py-1.5 rounded-lg bg-[#1a1a1a]/90 backdrop-blur-lg 
                     border border-purple-500/20 hover:border-purple-500/40 hover:bg-purple-500/10 
                     transition-all duration-200 text-xs sm:text-sm text-purple-300"
@@ -472,7 +479,7 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
                   ⚛️ Quantum Physics
                 </button>
                 <button
-                  onClick={() => handleSearch("Machine Learning")}
+                  onClick={() => onSearch("Machine Learning")}
                   className="px-3 py-1.5 rounded-lg bg-[#1a1a1a]/90 backdrop-blur-lg 
                     border border-blue-500/20 hover:border-blue-500/40 hover:bg-blue-500/10 
                     transition-all duration-200 text-xs sm:text-sm text-blue-300"
@@ -480,7 +487,7 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
                   🤖 Machine Learning
                 </button>
                 <button
-                  onClick={() => handleSearch("World History")}
+                  onClick={() => onSearch("World History")}
                   className="px-3 py-1.5 rounded-lg bg-[#1a1a1a]/90 backdrop-blur-lg 
                     border border-green-500/20 hover:border-green-500/40 hover:bg-green-500/10 
                     transition-all duration-200 text-xs sm:text-sm text-green-300"
@@ -494,84 +501,79 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
           <div className="relative flex-1">
             <div
               ref={messagesContainerRef}
-              className="absolute inset-0 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-800 scrollbar-track-transparent"
+              className="absolute inset-0 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-800 
+                scrollbar-track-transparent pb-32"
             >
-              <div className="max-w-3xl mx-auto px-4 pb-24">
-                <div className="space-y-2">
+              <div className="max-w-3xl mx-auto px-4 py-4">
+                <div className="space-y-4">
                   {messages.map((message, index) => (
-                    <div key={index} className="w-full">
+                    <div key={`${index}-${message.content}`} className="w-full">
                       {message.type === "user" ? (
-                        <div className="w-full">
-                          <div className="flex-1 text-base sm:text-lg font-semibold text-gray-100">
+                        <div className="w-full bg-gray-800/30 rounded-lg px-4 py-3 mb-4">
+                          <div className="text-base sm:text-lg font-semibold text-gray-100">
                             {message.content}
                           </div>
                         </div>
                       ) : (
-                        <div className="w-full">
-                          <div className="flex-1 min-w-0">
-                            {!message.content && isLoading ? (
-                              <div className="flex items-center space-x-2 py-2">
-                                <LoadingAnimation />
-                                <span className="text-sm text-gray-400">
-                                  Thinking...
-                                </span>
-                              </div>
-                            ) : (
-                              <ReactMarkdown
-                                remarkPlugins={[remarkGfm, remarkMath]}
-                                rehypePlugins={[rehypeKatex]}
-                                components={MarkdownComponents}
-                                className="whitespace-pre-wrap break-words space-y-1.5"
-                              >
-                                {message.content || ""}
-                              </ReactMarkdown>
-                            )}
+                        <div className="w-full space-y-4">
+                          <div className="prose prose-invert max-w-none bg-gray-800/50 border border-gray-700/50 rounded-lg px-4 py-3">
+                            <ReactMarkdown
+                              remarkPlugins={[remarkGfm, remarkMath]}
+                              rehypePlugins={[rehypeKatex]}
+                              components={MarkdownComponents}
+                              className="whitespace-pre-wrap break-words"
+                            >
+                              {message.content || ""}
+                            </ReactMarkdown>
+                          </div>
 
-                            {message.topics && message.topics.length > 0 && (
-                              <div className="mt-3">
-                                <RelatedTopics
-                                  topics={message.topics}
-                                  onTopicClick={handleRelatedQueryClick}
+                          {message.topics && message.topics.length > 0 && (
+                            <div className="mt-2">
+                              <RelatedTopics
+                                topics={message.topics}
+                                onTopicClick={handleRelatedQueryClick}
+                              />
+                            </div>
+                          )}
+
+                          {message.questions &&
+                            message.questions.length > 0 && (
+                              <div className="mt-2">
+                                <RelatedQuestions
+                                  questions={message.questions}
+                                  onQuestionClick={handleRelatedQueryClick}
                                 />
                               </div>
                             )}
-
-                            {message.questions &&
-                              message.questions.length > 0 && (
-                                <div className="mt-3">
-                                  <RelatedQuestions
-                                    questions={message.questions}
-                                    onQuestionClick={handleRelatedQueryClick}
-                                  />
-                                </div>
-                              )}
-                          </div>
                         </div>
                       )}
                     </div>
                   ))}
+
+                  {isLoading && (
+                    <div className="flex justify-center py-4">
+                      <Spinner size="lg" color="primary" />
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
 
             {/* Bottom Search Bar */}
             <div
-              className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-background 
-              via-background to-transparent pb-4 pt-6"
+              className="fixed bottom-20 sm:bottom-16 left-0 right-0 bg-gradient-to-t from-background 
+                via-background to-transparent pt-6 pb-4 z-30"
             >
-              <div className="w-full px-4 max-w-3xl mx-auto">
-                <div className="flex gap-2">
-                  <Button
-                    isIconOnly
-                    variant="flat"
-                    aria-label="Toggle History"
-                    className="bg-transparent hover:bg-gray-800"
+              <div className="w-full max-w-3xl mx-auto px-4">
+                <div className="flex gap-2 items-center w-full">
+                  <button
                     onClick={() => setShowHistory(!showHistory)}
+                    className="bg-transparent hover:bg-gray-800 p-2 rounded-lg flex-shrink-0 transition-colors"
                   >
-                    <History className="w-5 h-5" />
-                  </Button>
+                    <History className="w-5 h-5 text-gray-400" />
+                  </button>
                   <SearchBar
-                    onSearch={handleSearch}
+                    onSearch={onSearch}
                     placeholder="Ask a follow-up question..."
                     centered={false}
                     className="bg-[#1a1a1a]/90 backdrop-blur-lg border border-[#2a2a2a] shadow-2xl h-10"

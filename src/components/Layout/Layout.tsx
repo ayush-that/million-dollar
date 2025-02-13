@@ -15,7 +15,6 @@ import { toast } from "react-hot-toast";
 import logo from "/logo.svg";
 import { Link, useRouter } from "@tanstack/react-router";
 import { Sheet, SheetContent, SheetTrigger } from "../ui/sheet";
-import { ChatHistory } from "../Explore/ChatHistory";
 
 export const Layout: React.FC<{ children: React.ReactNode }> = ({
   children,
@@ -23,7 +22,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
   const router = useRouter();
   const { user } = useAuth();
   const currentPath = router.state.location.pathname;
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarOpen] = useState(true);
 
   const isAuthRoute =
     currentPath === "/login" || currentPath.startsWith("/auth/");
@@ -49,30 +48,21 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
       {/* Top Logo Bar - Only show for authenticated users or non-auth routes */}
       {(!isAuthRoute || user) && (
         <header className="fixed top-0 left-0 right-0 bg-[#1a1a1a]/95 backdrop-blur-lg border-b border-[#2a2a2a] z-40">
-          <div className="flex items-center justify-between h-14 max-w-6xl mx-auto px-4">
-            <div className="flex items-center h-full gap-3">
+          <div className="flex items-center justify-between h-14 px-3 sm:px-5 mx-5">
+            <div className="flex items-center h-full gap-2 sm:gap-3">
               {currentPath === "/explore" && (
                 <>
-                  {/* Desktop Sidebar Toggle */}
-                  <button
-                    onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                    className="p-2 hover:bg-[#2a2a2a]/90 rounded-lg transition-colors hidden lg:block -ml-2"
-                  >
-                    <Menu className="w-5 h-5 text-gray-400" />
-                  </button>
-
                   {/* Mobile Sidebar Toggle */}
                   <Sheet>
                     <SheetTrigger asChild>
-                      <button className="p-2 hover:bg-[#2a2a2a]/90 rounded-lg transition-colors lg:hidden -ml-2">
-                        <Menu className="w-5 h-5 text-gray-400" />
+                      <button className="p-1.5 sm:p-2 hover:bg-[#2a2a2a]/90 rounded-lg transition-colors lg:hidden">
+                        <Menu className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
                       </button>
                     </SheetTrigger>
                     <SheetContent
                       side="left"
-                      className="w-[320px] p-0 bg-[#1a1a1a]/95 backdrop-blur-lg border-[#2a2a2a]"
+                      className="w-[280px] sm:w-[320px] p-0 bg-[#1a1a1a]/95 backdrop-blur-lg border-[#2a2a2a]"
                     >
-                      {/* Pass the child component directly to let ExploreView handle chat history */}
                       {React.Children.map(children, (child) => {
                         if (React.isValidElement(child)) {
                           return React.cloneElement(
@@ -93,10 +83,14 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
               <a
                 href="/explore"
                 onClick={handleLogoClick}
-                className="flex items-center gap-2 h-full"
+                className="flex items-center gap-1.5 sm:gap-2 h-full"
               >
-                <img src={logo} alt="Educasm Logo" className="w-7 h-7" />
-                <span className="text-lg font-semibold text-gray-100">
+                <img
+                  src={logo}
+                  alt="Educasm Logo"
+                  className="w-6 h-6 sm:w-7 sm:h-7"
+                />
+                <span className="text-base sm:text-lg font-semibold text-gray-100">
                   Educasm
                 </span>
               </a>
@@ -107,11 +101,11 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
               <div className="flex items-center h-full">
                 <button
                   onClick={handleLogout}
-                  className="flex items-center gap-1.5 h-full px-3 text-sm text-gray-400 
+                  className="flex items-center gap-1.5 h-full px-2 sm:px-3 text-xs sm:text-sm text-gray-400 
                     hover:text-gray-200 transition-colors"
                 >
-                  <LogOut className="w-4 h-4" />
-                  <span>Logout</span>
+                  <LogOut className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  <span className="hidden sm:inline">Logout</span>
                 </button>
               </div>
             )}
@@ -121,9 +115,11 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
 
       {/* Main Content */}
       <main
-        className={`flex-1 ${!isAuthRoute || user ? "mt-14" : ""} mb-[5.5rem]`}
+        className={`flex-1 ${
+          !isAuthRoute || user ? "mt-14" : ""
+        } mb-32 sm:mb-24`}
       >
-        <div className="max-w-6xl mx-auto px-4">
+        <div className="max-w-6xl mx-auto px-3 sm:px-4 w-full pb-8">
           {React.Children.map(children, (child) => {
             if (React.isValidElement(child) && currentPath === "/explore") {
               return React.cloneElement(
@@ -139,10 +135,10 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
       {/* Bottom Navigation Bar */}
       {user && !isAuthRoute && (
         <nav className="fixed bottom-0 left-0 right-0 bg-[#1a1a1a]/95 backdrop-blur-lg border-t border-[#2a2a2a] z-40">
-          <div className="flex justify-around items-center h-12 max-w-6xl mx-auto">
+          <div className="flex justify-around items-center h-20 sm:h-16 max-w-6xl mx-auto px-2 pb-safe">
             <Link
               to="/explore"
-              className={`flex flex-col items-center gap-0.5 px-6 py-1 rounded-lg
+              className={`flex flex-col items-center gap-0.5 px-3 sm:px-6 py-1 rounded-lg
                 transition-colors ${
                   currentPath === "/explore"
                     ? "text-primary"
@@ -150,13 +146,13 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
                 }`}
               preload="intent"
             >
-              <Compass className="w-5 h-5" />
+              <Compass className="w-5 h-5 sm:w-5 sm:h-5" />
               <span className="text-[10px]">Explore</span>
             </Link>
 
             <Link
               to="/playground"
-              className={`flex flex-col items-center gap-0.5 px-6 py-1 rounded-lg
+              className={`flex flex-col items-center gap-0.5 px-3 sm:px-6 py-1 rounded-lg
                 transition-colors ${
                   currentPath === "/playground"
                     ? "text-primary"
@@ -164,13 +160,13 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
                 }`}
               preload="intent"
             >
-              <Gamepad2 className="w-5 h-5" />
+              <Gamepad2 className="w-5 h-5 sm:w-5 sm:h-5" />
               <span className="text-[10px]">Playground</span>
             </Link>
 
             <Link
               to="/progress"
-              className={`flex flex-col items-center gap-0.5 px-6 py-1 rounded-lg
+              className={`flex flex-col items-center gap-0.5 px-3 sm:px-6 py-1 rounded-lg
                 transition-colors ${
                   currentPath === "/progress"
                     ? "text-primary"
@@ -178,13 +174,13 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
                 }`}
               preload="intent"
             >
-              <LineChart className="w-5 h-5" />
+              <LineChart className="w-5 h-5 sm:w-5 sm:h-5" />
               <span className="text-[10px]">Progress</span>
             </Link>
 
             <Link
               to="/leaderboard"
-              className={`flex flex-col items-center gap-0.5 px-6 py-1 rounded-lg
+              className={`flex flex-col items-center gap-0.5 px-3 sm:px-6 py-1 rounded-lg
                 transition-colors ${
                   currentPath === "/leaderboard"
                     ? "text-primary"
@@ -192,13 +188,13 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
                 }`}
               preload="intent"
             >
-              <Trophy className="w-5 h-5" />
+              <Trophy className="w-5 h-5 sm:w-5 sm:h-5" />
               <span className="text-[10px]">Leaderboard</span>
             </Link>
 
             <Link
               to="/profile"
-              className={`flex flex-col items-center gap-0.5 px-6 py-1 rounded-lg
+              className={`flex flex-col items-center gap-0.5 px-3 sm:px-6 py-1 rounded-lg
                 transition-colors ${
                   currentPath === "/profile"
                     ? "text-primary"
@@ -206,7 +202,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
                 }`}
               preload="intent"
             >
-              <UserCircle className="w-5 h-5" />
+              <UserCircle className="w-5 h-5 sm:w-5 sm:h-5" />
               <span className="text-[10px]">Profile</span>
             </Link>
           </div>

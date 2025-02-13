@@ -15,6 +15,8 @@ import {
   Lightbulb,
 } from "lucide-react";
 import { Question, UserContext } from "../../types";
+import { updateUserScore } from "../../lib/supabase/db";
+import { useAuth } from "../../lib/context/AuthContext";
 
 interface PlaygroundViewProps {
   initialQuery?: string;
@@ -43,9 +45,10 @@ export const PlaygroundView: React.FC<PlaygroundViewProps> = ({
   initialQuery,
   onError,
   onSuccess,
-  userContext,
+  userContext = { age: 16 },
 }) => {
   const { getQuestion } = useApi();
+  const { user } = useAuth();
   const [isInitialLoading, setIsInitialLoading] = useState(false);
   const [query, setQuery] = useState(initialQuery || "");
   const [currentQuestion, setCurrentQuestion] = useState<Question | null>(null);
@@ -133,7 +136,11 @@ export const PlaygroundView: React.FC<PlaygroundViewProps> = ({
       setSessionStats((prev) => ({ ...prev, isSessionComplete: true }));
       stopQuestionTimer();
       if (nextQuestionTimer) clearTimeout(nextQuestionTimer);
-      onSuccess("Congratulations! You've completed your practice session! 🎉");
+      if (onSuccess) {
+        onSuccess(
+          "Congratulations! You've completed your practice session! 🎉"
+        );
+      }
       return;
     }
 
@@ -144,11 +151,21 @@ export const PlaygroundView: React.FC<PlaygroundViewProps> = ({
       setPreloadedQuestion(question);
     } catch (error) {
       console.error("Error fetching question:", error);
-      onError("Failed to generate question. Please try again.");
+      if (onError && typeof onError === "function") {
+        onError("Failed to generate question. Please try again.");
+      }
     }
   };
 
   const handleSearch = async (newQuery: string) => {
+    console.log("Starting search with query:", newQuery);
+    if (!newQuery.trim()) {
+      if (onError && typeof onError === "function") {
+        onError("Please enter a topic to practice");
+      }
+      return;
+    }
+
     try {
       setIsInitialLoading(true);
       setCurrentQuestion(null);
@@ -156,8 +173,23 @@ export const PlaygroundView: React.FC<PlaygroundViewProps> = ({
       setShowExplanation(false);
       setQuery(newQuery);
 
+      console.log("Fetching first question...");
       // Load first question immediately
       const firstQuestion = await getQuestion(newQuery, 1, userContext);
+      console.log("Received question:", firstQuestion);
+
+      if (!firstQuestion) {
+        throw new Error("No question received from API");
+      }
+
+      if (
+        !firstQuestion.text ||
+        !firstQuestion.options ||
+        firstQuestion.options.length !== 4
+      ) {
+        throw new Error("Invalid question format received");
+      }
+
       setCurrentQuestion(firstQuestion);
       setSelectedAnswer(null);
       setCurrentQuestionTime(0); // Reset timer
@@ -181,7 +213,16 @@ export const PlaygroundView: React.FC<PlaygroundViewProps> = ({
       }
     } catch (error) {
       console.error("Search error:", error);
-      onError("Failed to start practice session");
+      const errorMessage =
+        error instanceof Error ? error.message : "An unknown error occurred";
+      if (onError && typeof onError === "function") {
+        onError(
+          `Failed to start practice session: ${errorMessage}. Please try again or choose a different topic.`
+        );
+      }
+      setCurrentQuestion(null);
+      setSelectedAnswer(null);
+      setShowExplanation(false);
     } finally {
       setIsInitialLoading(false);
     }
@@ -231,13 +272,23 @@ export const PlaygroundView: React.FC<PlaygroundViewProps> = ({
     }, 100);
   };
 
-  const handleAnswer = (index: number) => {
+  const handleAnswer = async (index: number) => {
     if (selectedAnswer !== null || !currentQuestion) return;
 
     setSelectedAnswer(index);
     setShowExplanation(true);
     stopQuestionTimer();
-    updateStats(index === currentQuestion.correctAnswer);
+    const isCorrect = index === currentQuestion.correctAnswer;
+    updateStats(isCorrect);
+
+    // Update user score in database if answer is correct
+    if (isCorrect && user) {
+      try {
+        await updateUserScore(user.id);
+      } catch (error) {
+        console.error("Error updating user score:", error);
+      }
+    }
 
     if (!isPaused) {
       // Start loading next question immediately
@@ -314,9 +365,7 @@ export const PlaygroundView: React.FC<PlaygroundViewProps> = ({
     <div className="w-full min-h-[calc(100vh-4rem)] flex flex-col">
       {!currentQuestion || sessionStats.isSessionComplete ? (
         <div className="flex-1 flex flex-col items-center justify-center px-4">
-          <h1 className="text-2xl sm:text-3xl font-thin text-center font-instrument">
-            What do you want to <span className="italic">practice</span>?
-          </h1>
+          <h1 className="text-2xl sm:text-3xl font-thin text-center font-instrument mb-8">What do you want to <span className="italic">practice</span>?</h1>
 
           <div className="w-full max-w-xl mx-auto">
             <SearchBar

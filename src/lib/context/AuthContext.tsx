@@ -1,6 +1,11 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { User } from '@supabase/supabase-js';
-import { getCurrentUser, onAuthStateChange } from '../supabase/client';
+import React, { createContext, useContext, useEffect, useState } from "react";
+import { User } from "@supabase/supabase-js";
+import {
+  getCurrentUser,
+  onAuthStateChange,
+  supabase,
+} from "../supabase/client";
+import { initializeUserScore } from "../supabase/db";
 
 interface AuthContextType {
   user: User | null;
@@ -14,35 +19,34 @@ const AuthContext = createContext<AuthContextType>({
 
 export const useAuth = () => useContext(AuthContext);
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check for current user
-    const initializeAuth = async () => {
-      try {
-        const { user: currentUser } = await getCurrentUser();
-        setUser(currentUser);
-      } catch (error) {
-        console.error('Error checking auth status:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    initializeAuth();
-
-    // Subscribe to auth changes
-    const { data: authListener } = onAuthStateChange((event, session) => {
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
+      if (session?.user) {
+        initializeUserScore(session.user.id).catch(console.error);
+      }
       setLoading(false);
     });
 
-    // Cleanup subscription
-    return () => {
-      authListener?.subscription.unsubscribe();
-    };
+    // Listen for auth changes
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        initializeUserScore(session.user.id).catch(console.error);
+      }
+      setLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   return (
@@ -50,4 +54,4 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       {children}
     </AuthContext.Provider>
   );
-}; 
+};

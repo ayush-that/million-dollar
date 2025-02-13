@@ -18,12 +18,22 @@ const transformQuestion = (rawQuestion: Question): Question => ({
 
 export const api = {
   async getQuestion(topic: string, level: number, userContext: UserContext): Promise<Question> {
+    console.log('API getQuestion called with:', { topic, level, userContext });
     try {
+      console.log('Calling GPT service...');
       const question = await gptService.getPlaygroundQuestion(topic, level, userContext);
-      return transformQuestion(question);
+      console.log('Received raw question from GPT:', question);
+      
+      if (!question) {
+        throw new Error('No question received from GPT service');
+      }
+      
+      const transformedQuestion = transformQuestion(question);
+      console.log('Transformed question:', transformedQuestion);
+      return transformedQuestion;
     } catch (error) {
       console.error("Question generation error:", error);
-      throw new Error("Failed to generate question");
+      throw error; // Re-throw the error to be handled by the caller
     }
   },
 
