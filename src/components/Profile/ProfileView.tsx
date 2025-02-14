@@ -4,9 +4,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { Slider } from "@/components/ui/slider";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { User, Clock, Mail, Target } from "lucide-react";
+import { User, Clock, Target } from "lucide-react";
 import { useAuth } from "../../lib/context/AuthContext";
 import { supabase } from "../../lib/supabase/client";
 
@@ -95,7 +94,7 @@ export const ProfileView = () => {
     <div className="container mx-auto px-4 py-6">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Personal Information */}
-        <Card className="bg-[#1a1a1a]/60 border-[#2a2a2a] lg:col-span-2">
+        <Card className="bg-[#1a1a1a]/60 border-[#2a2a2a] rounded-none lg:col-span-2">
           <CardHeader>
             <CardTitle className="text-gray-200">
               Personal Information
@@ -104,7 +103,7 @@ export const ProfileView = () => {
           <CardContent>
             <div className="flex flex-col md:flex-row gap-6">
               <div className="flex flex-col items-center gap-4">
-                <Avatar className="h-24 w-24">
+                <Avatar className="h-24 w-24 rounded-none">
                   <AvatarImage src="" />
                   <AvatarFallback className="bg-[#2a2a2a] text-gray-400">
                     <User className="h-12 w-12" />
@@ -112,7 +111,7 @@ export const ProfileView = () => {
                 </Avatar>
                 <Button
                   variant="outline"
-                  className="border-[#3a3a3a] text-gray-200"
+                  className="border-[#3a3a3a] text-gray-200 rounded-none hover:bg-[#2a2a2a]"
                 >
                   Change Avatar
                 </Button>
@@ -127,7 +126,7 @@ export const ProfileView = () => {
                     <Input
                       id="name"
                       placeholder="John Doe"
-                      className="bg-[#2a2a2a] border-[#3a3a3a] text-gray-200"
+                      className="bg-[#2a2a2a] border-[#3a3a3a] text-gray-200 rounded-none"
                     />
                   </div>
                   <div className="space-y-2">
@@ -138,7 +137,7 @@ export const ProfileView = () => {
                       id="email"
                       type="email"
                       placeholder="john@example.com"
-                      className="bg-[#2a2a2a] border-[#3a3a3a] text-gray-200"
+                      className="bg-[#2a2a2a] border-[#3a3a3a] text-gray-200 rounded-none"
                     />
                   </div>
                   <div className="space-y-2">
@@ -148,28 +147,23 @@ export const ProfileView = () => {
                     <Input
                       id="username"
                       placeholder="johndoe"
-                      className="bg-[#2a2a2a] border-[#3a3a3a] text-gray-200"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="timezone" className="text-gray-200">
-                      Timezone
-                    </Label>
-                    <Input
-                      id="timezone"
-                      placeholder="UTC+00:00"
-                      className="bg-[#2a2a2a] border-[#3a3a3a] text-gray-200"
+                      className="bg-[#2a2a2a] border-[#3a3a3a] text-gray-200 rounded-none"
                     />
                   </div>
                 </div>
-                <Button className="w-full md:w-auto">Save Changes</Button>
+                <Button
+                  className="w-full md:w-auto border-[#3a3a3a] text-gray-200 rounded-none hover:bg-[#2a2a2a]"
+                  variant="outline"
+                >
+                  Save Changes
+                </Button>
               </div>
             </div>
           </CardContent>
         </Card>
 
         {/* Learning Goals */}
-        <Card className="bg-[#1a1a1a]/60 border-[#2a2a2a]">
+        <Card className="bg-[#1a1a1a]/60 border-[#2a2a2a] rounded-none">
           <CardHeader>
             <CardTitle className="text-gray-200">Learning Goals</CardTitle>
           </CardHeader>
@@ -211,32 +205,57 @@ export const ProfileView = () => {
                   </span>
                 </div>
 
-                <div className="relative">
-                  <input
-                    type="range"
-                    min="30"
-                    max="480"
-                    step="30"
+                <div className="flex items-center gap-4">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8 border-[#3a3a3a] text-gray-200 rounded-none hover:bg-[#2a2a2a]"
+                    onClick={() =>
+                      setGoals((prev) => ({
+                        ...prev,
+                        dailyTimeMinutes: Math.max(
+                          30,
+                          prev.dailyTimeMinutes - 30
+                        ),
+                      }))
+                    }
+                  >
+                    -
+                  </Button>
+                  <Input
+                    type="number"
                     value={goals.dailyTimeMinutes}
-                    onChange={handleTimeChange}
-                    className="w-full h-2 bg-gray-800 rounded-lg appearance-none cursor-pointer
-                      [&::-webkit-slider-thumb]:appearance-none
-                      [&::-webkit-slider-thumb]:w-4
-                      [&::-webkit-slider-thumb]:h-4
-                      [&::-webkit-slider-thumb]:rounded-full
-                      [&::-webkit-slider-thumb]:bg-primary
-                      [&::-webkit-slider-thumb]:cursor-pointer
-                      [&::-moz-range-thumb]:w-4
-                      [&::-moz-range-thumb]:h-4
-                      [&::-moz-range-thumb]:rounded-full
-                      [&::-moz-range-thumb]:bg-primary
-                      [&::-moz-range-thumb]:border-0
-                      [&::-moz-range-thumb]:cursor-pointer"
+                    onChange={(e) => {
+                      const value = parseInt(e.target.value);
+                      if (value >= 30 && value <= 480) {
+                        setGoals((prev) => ({
+                          ...prev,
+                          dailyTimeMinutes: value,
+                        }));
+                      }
+                    }}
+                    min={30}
+                    max={480}
+                    step={30}
+                    className="w-20 text-center bg-[#2a2a2a] border-[#3a3a3a] text-gray-200 rounded-none"
                   />
-                  <div className="absolute -bottom-6 left-0 right-0 flex justify-between text-xs text-gray-500">
-                    <span>30m</span>
-                    <span>8h</span>
-                  </div>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8 border-[#3a3a3a] text-gray-200 rounded-none hover:bg-[#2a2a2a]"
+                    onClick={() =>
+                      setGoals((prev) => ({
+                        ...prev,
+                        dailyTimeMinutes: Math.min(
+                          480,
+                          prev.dailyTimeMinutes + 30
+                        ),
+                      }))
+                    }
+                  >
+                    +
+                  </Button>
+                  <span className="text-sm text-gray-400">minutes</span>
                 </div>
               </div>
 
@@ -254,43 +273,60 @@ export const ProfileView = () => {
                   </span>
                 </div>
 
-                <div className="relative">
-                  <input
-                    type="range"
-                    min="1"
-                    max="20"
+                <div className="flex items-center gap-4">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8 border-[#3a3a3a] text-gray-200 rounded-none hover:bg-[#2a2a2a]"
+                    onClick={() =>
+                      setGoals((prev) => ({
+                        ...prev,
+                        weeklyTopics: Math.max(1, prev.weeklyTopics - 1),
+                      }))
+                    }
+                  >
+                    -
+                  </Button>
+                  <Input
+                    type="number"
                     value={goals.weeklyTopics}
-                    onChange={handleTopicsChange}
-                    className="w-full h-2 bg-gray-800 rounded-lg appearance-none cursor-pointer
-                      [&::-webkit-slider-thumb]:appearance-none
-                      [&::-webkit-slider-thumb]:w-4
-                      [&::-webkit-slider-thumb]:h-4
-                      [&::-webkit-slider-thumb]:rounded-full
-                      [&::-webkit-slider-thumb]:bg-primary
-                      [&::-webkit-slider-thumb]:cursor-pointer
-                      [&::-moz-range-thumb]:w-4
-                      [&::-moz-range-thumb]:h-4
-                      [&::-moz-range-thumb]:rounded-full
-                      [&::-moz-range-thumb]:bg-primary
-                      [&::-moz-range-thumb]:border-0
-                      [&::-moz-range-thumb]:cursor-pointer"
+                    onChange={(e) => {
+                      const value = parseInt(e.target.value);
+                      if (value >= 1 && value <= 20) {
+                        setGoals((prev) => ({ ...prev, weeklyTopics: value }));
+                      }
+                    }}
+                    min={1}
+                    max={20}
+                    step={1}
+                    className="w-20 text-center bg-[#2a2a2a] border-[#3a3a3a] text-gray-200 rounded-none"
                   />
-                  <div className="absolute -bottom-6 left-0 right-0 flex justify-between text-xs text-gray-500">
-                    <span>1</span>
-                    <span>20</span>
-                  </div>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8 border-[#3a3a3a] text-gray-200 rounded-none hover:bg-[#2a2a2a]"
+                    onClick={() =>
+                      setGoals((prev) => ({
+                        ...prev,
+                        weeklyTopics: Math.min(20, prev.weeklyTopics + 1),
+                      }))
+                    }
+                  >
+                    +
+                  </Button>
+                  <span className="text-sm text-gray-400">topics</span>
                 </div>
               </div>
 
               {/* Update Button */}
-              <button
+              <Button
                 onClick={handleUpdateGoals}
                 disabled={isSaving}
-                className="w-full mt-8 px-4 py-2 bg-primary text-white rounded-lg font-medium
-                  hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                variant="outline"
+                className="w-full mt-8 border-[#3a3a3a] text-gray-200 rounded-none hover:bg-[#2a2a2a] disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSaving ? "Saving..." : "Update Goals"}
-              </button>
+              </Button>
             </div>
           </CardContent>
         </Card>

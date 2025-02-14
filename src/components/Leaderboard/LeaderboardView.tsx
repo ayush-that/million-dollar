@@ -42,22 +42,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
   }
 
   return (
-    <div className="w-full max-w-3xl mx-auto px-4 py-8 sm:py-12">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-2">
-          <Trophy className="w-6 h-6 text-yellow-500" />
-          <h1 className="text-2xl font-semibold text-gray-100">Leaderboard</h1>
-        </div>
-        <button
-          onClick={loadLeaderboard}
-          className="px-3 py-1.5 rounded-lg bg-[#1a1a1a]/90 hover:bg-[#2a2a2a]/90 
-            border border-[#2a2a2a] text-sm text-gray-400 hover:text-gray-200 
-            transition-colors"
-        >
-          Refresh
-        </button>
-      </div>
-
+    <div className="w-full max-w-3xl mx-auto px-4 py-6">
       <div className="space-y-3">
         {users.length > 0 ? (
           users.map((user, index) => (
