@@ -36,7 +36,31 @@ export const ProfileView = () => {
         .eq("user_id", user.id)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        // If no goals exist yet, create default goals
+        if (error.code === "PGRST116") {
+          const { data: newGoals, error: insertError } = await supabase
+            .from("learning_goals")
+            .insert({
+              user_id: user.id,
+              daily_time_minutes: 120, // 2 hours default
+              weekly_topics: 5,
+            })
+            .select()
+            .single();
+
+          if (insertError) throw insertError;
+
+          if (newGoals) {
+            setGoals({
+              dailyTimeMinutes: newGoals.daily_time_minutes,
+              weeklyTopics: newGoals.weekly_topics,
+            });
+          }
+          return;
+        }
+        throw error;
+      }
 
       if (data) {
         setGoals({
