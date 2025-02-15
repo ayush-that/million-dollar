@@ -368,6 +368,12 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
 
         let isFirstChunk = true;
 
+        // Get the last few messages for context (limit to last 4 messages to keep context relevant)
+        const contextMessages = messages.slice(-4).map((msg) => ({
+          type: msg.type,
+          content: msg.content || "",
+        }));
+
         await gptService.streamExploreContent(
           query,
           userContext,
@@ -414,7 +420,8 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
                 await saveChatMessage(user.id, sessionId, currentAiMessage);
               }
             }
-          }
+          },
+          contextMessages // Pass the chat history
         );
 
         await loadChatSessions();

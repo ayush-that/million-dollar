@@ -558,14 +558,30 @@ export class GPTService {
       text?: string;
       topics?: any[];
       questions?: any[];
-    }) => void
+    }) => void,
+    chatHistory: Array<{ type: "user" | "ai"; content: string }> = []
   ): Promise<void> {
     const maxRetries = 3;
     let retryCount = 0;
 
     while (retryCount < maxRetries) {
       try {
-        const systemPrompt = `You are a Gen-Z tutor who explains complex topics concisely for a ${userContext.age} year old.
+        // Create chat context from history
+        const chatContext = chatHistory
+          .map(
+            (msg) =>
+              `${msg.type === "user" ? "User" : "Assistant"}: ${msg.content}`
+          )
+          .join("\n");
+
+        const systemPrompt = `You are a Gen-Z tutor who explains complex topics concisely for a ${
+          userContext.age
+        } year old.
+          ${
+            chatContext
+              ? `\nPrevious conversation context:\n${chatContext}\n`
+              : ""
+          }
           First provide the explanation in plain text, then provide related content in a STRICT single-line JSON format.
           
           Structure your response exactly like this:
@@ -580,10 +596,12 @@ export class GPTService {
           {"topics":[{"name":"Topic","type":"prerequisite","detail":"Why"}],"questions":[{"text":"Q?","type":"curiosity","detail":"Context"}]}
 
           RULES:
-          - ADAPT CONTENT FOR ${userContext.age} YEAR OLD:
-            
-            * Match complexity of explanation to age level
-            
+          - ADAPT CONTENT FOR ${userContext.age} YEAR OLD
+          - USE PREVIOUS CONVERSATION CONTEXT TO:
+            * Build upon previous explanations
+            * Reference earlier topics when relevant
+            * Avoid repeating information
+            * Make connections to previously discussed concepts
           - STRICT LENGTH LIMITS:
             * Total explanation must be 60-80 words maximum
             * Each paragraph around 20-25 words each
@@ -607,7 +625,13 @@ export class GPTService {
           - Topic types: prerequisite, extension, application, parallel, deeper
           - Question types: curiosity, mechanism, causality, innovation, insight`;
 
-        const userPrompt = `Explain "${query}" in three very concise paragraphs for a ${userContext.age} year old in genz style:
+        const userPrompt = `${
+          chatContext
+            ? "Based on our previous conversation, explain"
+            : "Explain"
+        } "${query}" in three very concise paragraphs for a ${
+          userContext.age
+        } year old in genz style:
           1. Basic definition (15-20 words)
           2. Key details (15-20 words)
           3. Direct applications and facts (15-20 words)
