@@ -232,6 +232,7 @@ export const getTopUsers = async (limit: number = 10): Promise<UserScore[]> => {
     const {
       data: { user },
     } = await supabase.auth.getUser();
+
     if (user) {
       await initializeUserScore(user.id).catch(console.error);
     }
@@ -243,19 +244,33 @@ export const getTopUsers = async (limit: number = 10): Promise<UserScore[]> => {
         id,
         user_id,
         correct_answers,
-        updated_at,
-        profiles:user_id (
-          username,
-          full_name,
-          avatar_url
-        )
+        updated_at
       `
       )
       .order("correct_answers", { ascending: false })
       .limit(limit);
 
     if (error) throw error;
-    return data || [];
+
+    // Get user profiles for the top scorers
+    const userIds = data.map((score) => score.user_id);
+    const { data: profiles, error: profileError } = await supabase
+      .from("profiles")
+      .select("id, age")
+      .in("id", userIds);
+
+    if (profileError) throw profileError;
+
+    // Combine scores with profiles
+    const scoresWithProfiles = data.map((score) => {
+      const profile = profiles?.find((p) => p.id === score.user_id);
+      return {
+        ...score,
+        profile: profile || { id: score.user_id, age: 0 },
+      };
+    });
+
+    return scoresWithProfiles;
   } catch (error) {
     console.error("Error in getTopUsers:", error);
     return [];
