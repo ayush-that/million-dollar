@@ -1,4 +1,4 @@
-import React, { useState, KeyboardEvent } from 'react';
+import React, { useState, KeyboardEvent } from "react";
 
 interface SearchBarProps {
   value: string;
@@ -7,7 +7,12 @@ interface SearchBarProps {
   isLoading?: boolean;
 }
 
-export const SearchBar = ({ value, onChange, onSearch, isLoading }: SearchBarProps) => {
+export const SearchBar = ({
+  value,
+  onChange,
+  onSearch,
+  isLoading,
+}: SearchBarProps) => {
   const [localValue, setLocalValue] = useState(value);
 
   const handleSubmit = () => {
@@ -23,7 +28,7 @@ export const SearchBar = ({ value, onChange, onSearch, isLoading }: SearchBarPro
   };
 
   const handleKeyPress = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
+    if (e.key === "Enter") {
       handleSubmit();
     }
   };
@@ -43,12 +48,14 @@ export const SearchBar = ({ value, onChange, onSearch, isLoading }: SearchBarPro
         onClick={handleSubmit}
         disabled={isLoading || !localValue.trim()}
         className={`absolute right-2 top-1/2 transform -translate-y-1/2 px-4 py-1 rounded-md 
-          ${isLoading || !localValue.trim() 
-            ? 'bg-gray-700 text-gray-400 cursor-not-allowed' 
-            : 'bg-primary text-white hover:bg-primary/90'}`}
+          ${
+            isLoading || !localValue.trim()
+              ? "bg-gray-700 text-gray-400 cursor-not-allowed"
+              : "bg-primary text-white hover:bg-primary/90"
+          }`}
       >
-        {isLoading ? 'Searching...' : 'Search'}
+        {isLoading ? "Searching..." : "Search"}
       </button>
     </div>
   );
-}; 
+};

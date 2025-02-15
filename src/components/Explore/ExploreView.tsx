@@ -15,7 +15,6 @@ import { GPTService } from "../../services/gptService";
 import { MarkdownComponentProps } from "../../types";
 import { RelatedTopics } from "./RelatedTopics";
 import { RelatedQuestions } from "./RelatedQuestions";
-import { LoadingAnimation } from "../shared/LoadingAnimation";
 import { UserContext } from "../../types";
 import { useAuth } from "../../lib/context/AuthContext";
 import {
@@ -24,13 +23,10 @@ import {
   getChatMessages,
   saveChatMessage,
   ChatSession,
-  ChatMessage as DBChatMessage,
 } from "../../lib/supabase/db";
 import { ChatHistory } from "./ChatHistory";
-import { Menu, History, Send } from "lucide-react";
+import { History } from "lucide-react";
 import { useRouter } from "@tanstack/react-router";
-import { Button } from "@nextui-org/react";
-import { Sheet, SheetContent, SheetTrigger } from "../../components/ui/sheet";
 import { Spinner } from "@nextui-org/react";
 
 interface Message {
@@ -68,8 +64,8 @@ interface ExploreViewProps {
   onRelatedQueryClick?: (query: string) => void;
   userContext: UserContext;
   isSidebarOpen?: boolean;
-  isSheet?: boolean;
-  onSearch: (query: string) => void;
+  _isSheet?: boolean;
+  _onSearch: (query: string) => void;
 }
 
 const MarkdownComponents: Record<string, React.FC<MarkdownComponentProps>> = {
@@ -224,16 +220,16 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
   onRelatedQueryClick,
   userContext,
   isSidebarOpen = true,
-  isSheet = false,
-  onSearch,
+  _isSheet = true,
+  _onSearch,
 }) => {
   const { user } = useAuth();
   const router = useRouter();
   const [messages, setMessages] = useState<Message[]>([]);
   const [showInitialSearch, setShowInitialSearch] = useState(!initialQuery);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const _messagesEndRef = useRef<HTMLDivElement>(null);
   const gptService = useMemo(() => new GPTService(), []);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const _containerRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
@@ -262,7 +258,7 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
     if (user) {
       loadChatSessions();
     }
-  }, [user]);
+  }, [user, loadChatSessions]);
 
   useEffect(() => {
     const handleResetExplore = () => {
@@ -285,7 +281,7 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
         handleLoadSession as EventListener
       );
     };
-  }, []);
+  }, [loadChatSession]);
 
   const loadChatSessions = async () => {
     if (!user) return;
@@ -434,7 +430,16 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
         setIsLoading(false);
       }
     },
-    [gptService, onError, userContext, scrollToTop, currentSessionId, user]
+    [
+      gptService,
+      onError,
+      userContext,
+      scrollToTop,
+      currentSessionId,
+      user,
+      messages,
+      loadChatSessions,
+    ]
   );
 
   const handleRelatedQueryClick = useCallback(

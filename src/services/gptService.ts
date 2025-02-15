@@ -1,4 +1,11 @@
-import { Question, UserContext, ExploreResponse } from "../types";
+import {
+  QuizQuestion,
+  UserContext,
+  ExploreResponse,
+  Topic,
+  StreamChunk,
+  RelatedQuestion,
+} from "../types";
 import OpenAI from "openai";
 
 export class GPTService {
@@ -203,7 +210,7 @@ export class GPTService {
     }
   }
 
-  private validateQuestionFormat(question: Question): boolean {
+  private validateQuestionFormat(question: QuizQuestion): boolean {
     try {
       // Basic validation
       if (!question.text?.trim()) return false;
@@ -245,7 +252,7 @@ export class GPTService {
     topic: string,
     level: number,
     userContext: UserContext
-  ): Promise<Question> {
+  ): Promise<QuizQuestion> {
     console.log("GPT service getPlaygroundQuestion called with:", {
       topic,
       level,
@@ -329,7 +336,7 @@ export class GPTService {
     }
   }
 
-  private shuffleOptionsAndAnswer(question: Question): Question {
+  private shuffleOptionsAndAnswer(question: QuizQuestion): QuizQuestion {
     // Create array of option objects with original index
     const optionsWithIndex = question.options.map((opt, idx) => ({
       text: opt,
@@ -358,7 +365,7 @@ export class GPTService {
   async getTestQuestions(
     topic: string,
     examType: "JEE" | "NEET"
-  ): Promise<Question[]> {
+  ): Promise<QuizQuestion[]> {
     try {
       const systemPrompt = `Create a ${examType} exam test set about ${topic}.
         Generate exactly 15 questions following this structure:
@@ -412,7 +419,7 @@ export class GPTService {
       console.log(`Received ${parsed.questions.length} questions`);
 
       const processedQuestions = parsed.questions.map(
-        (q: Partial<Question>, index: number) => {
+        (q: Partial<QuizQuestion>, index: number) => {
           const difficulty = Math.floor(index / 5) + 1;
           return {
             text: q.text || "",
@@ -426,13 +433,13 @@ export class GPTService {
             examType,
             questionType: "conceptual",
             ageGroup: "16-18",
-          } as Question;
+          } as QuizQuestion;
         }
       );
 
       console.log("Processed questions:", processedQuestions.length);
 
-      const validQuestions = processedQuestions.filter((q: Question) => {
+      const validQuestions = processedQuestions.filter((q: QuizQuestion) => {
         const isValid = this.validateQuestionFormat(q);
         if (!isValid) {
           console.log("Invalid question:", q);
@@ -554,11 +561,7 @@ export class GPTService {
   async streamExploreContent(
     query: string,
     userContext: UserContext,
-    onChunk: (content: {
-      text?: string;
-      topics?: any[];
-      questions?: any[];
-    }) => void,
+    onChunk: (content: StreamChunk) => void,
     chatHistory: Array<{ type: "user" | "ai"; content: string }> = []
   ): Promise<void> {
     const maxRetries = 3;
@@ -654,8 +657,8 @@ export class GPTService {
 
         let mainContent = "";
         let jsonContent = "";
-        let currentTopics: any[] = [];
-        let currentQuestions: any[] = [];
+        const currentTopics: Topic[] = [];
+        const currentQuestions: RelatedQuestion[] = [];
         let isJsonSection = false;
 
         for await (const chunk of stream) {
@@ -669,43 +672,53 @@ export class GPTService {
           if (isJsonSection) {
             jsonContent += content;
             try {
-              // Try to parse complete JSON objects
               if (jsonContent.includes("}")) {
                 const jsonStr = jsonContent.trim();
                 if (jsonStr.startsWith("{") && jsonStr.endsWith("}")) {
                   const parsed = JSON.parse(jsonStr);
 
-                  // Process topics if available
                   if (parsed.topics && Array.isArray(parsed.topics)) {
-                    parsed.topics.forEach((topic: any) => {
-                      if (!currentTopics.some((t) => t.topic === topic.name)) {
-                        currentTopics.push({
-                          topic: topic.name,
-                          type: topic.type,
-                          reason: topic.detail,
-                        });
+                    parsed.topics.forEach(
+                      (topic: {
+                        name: string;
+                        type: string;
+                        detail: string;
+                      }) => {
+                        if (
+                          !currentTopics.some((t) => t.topic === topic.name)
+                        ) {
+                          currentTopics.push({
+                            topic: topic.name,
+                            type: topic.type as Topic["type"],
+                            reason: topic.detail,
+                          });
+                        }
                       }
-                    });
+                    );
                   }
 
-                  // Process questions if available
                   if (parsed.questions && Array.isArray(parsed.questions)) {
-                    parsed.questions.forEach((question: any) => {
-                      if (
-                        !currentQuestions.some(
-                          (q) => q.question === question.text
-                        )
-                      ) {
-                        currentQuestions.push({
-                          question: question.text,
-                          type: question.type,
-                          context: question.detail,
-                        });
+                    parsed.questions.forEach(
+                      (question: {
+                        text: string;
+                        type: string;
+                        detail: string;
+                      }) => {
+                        if (
+                          !currentQuestions.some(
+                            (q) => q.question === question.text
+                          )
+                        ) {
+                          currentQuestions.push({
+                            question: question.text,
+                            type: question.type as RelatedQuestion["type"],
+                            context: question.detail,
+                          });
+                        }
                       }
-                    });
+                    );
                   }
 
-                  // Send update with current state
                   onChunk({
                     text: mainContent.trim(),
                     topics:
@@ -718,7 +731,6 @@ export class GPTService {
                 }
               }
             } catch (error) {
-              // Continue accumulating if parsing fails
               console.debug("JSON parse error:", error);
             }
           } else {
@@ -738,14 +750,13 @@ export class GPTService {
         console.error(`API attempt ${retryCount} failed:`, error);
 
         if (retryCount === maxRetries) {
-          const errorMessage =
-            error instanceof Error ? error.message : "Unknown error";
           throw new Error(
-            `Failed to stream content after ${maxRetries} attempts. ${errorMessage}`
+            `Failed to stream content after ${maxRetries} attempts: ${
+              error instanceof Error ? error.message : "Unknown error"
+            }`
           );
         }
 
-        // Wait before retrying (exponential backoff)
         await new Promise((resolve) =>
           setTimeout(resolve, Math.pow(2, retryCount) * 1000)
         );

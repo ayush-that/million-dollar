@@ -1,5 +1,5 @@
-import type { FC } from 'react';
-import { XCircle } from 'lucide-react';
+import type { FC } from "react";
+import { XCircle } from "lucide-react";
 
 interface ResultModalProps {
   isOpen: boolean;
@@ -12,46 +12,49 @@ interface ResultModalProps {
   rankPrediction: number;
 }
 
-export const ResultModal: FC<ResultModalProps> = ({ 
-  isOpen, 
-  onClose, 
-  score, 
-  totalQuestions, 
-  accuracy, 
+export const ResultModal: FC<ResultModalProps> = ({
+  isOpen,
+  onClose,
+  score,
+  totalQuestions,
+  accuracy,
   averageTime,
   topic,
-  rankPrediction 
+  rankPrediction,
 }) => {
   if (!isOpen) return null;
 
   const getTopicAnalysis = (accuracy: number, averageTime: number) => {
     if (accuracy >= 85 && averageTime < 60) {
       return {
-        status: 'Excellent',
-        color: 'text-green-500',
+        status: "Excellent",
+        color: "text-green-500",
         message: `Your performance in ${topic} is outstanding! You're well-prepared for competitive exams.`,
-        suggestion: 'Focus on maintaining this level while exploring advanced concepts.'
+        suggestion:
+          "Focus on maintaining this level while exploring advanced concepts.",
       };
     } else if (accuracy >= 70 && averageTime < 90) {
       return {
-        status: 'Good',
-        color: 'text-blue-500',
+        status: "Good",
+        color: "text-blue-500",
         message: `You have a strong grasp of ${topic}. Keep refining your skills.`,
-        suggestion: 'Work on improving speed while maintaining accuracy.'
+        suggestion: "Work on improving speed while maintaining accuracy.",
       };
     } else if (accuracy >= 50) {
       return {
-        status: 'Fair',
-        color: 'text-yellow-500',
+        status: "Fair",
+        color: "text-yellow-500",
         message: `You're making progress in ${topic}, but there's room for improvement.`,
-        suggestion: 'Focus on understanding core concepts and practice regularly.'
+        suggestion:
+          "Focus on understanding core concepts and practice regularly.",
       };
     } else {
       return {
-        status: 'Needs Work',
-        color: 'text-red-500',
+        status: "Needs Work",
+        color: "text-red-500",
         message: `Your ${topic} fundamentals need strengthening.`,
-        suggestion: 'Start with basic concepts and gradually build up complexity.'
+        suggestion:
+          "Start with basic concepts and gradually build up complexity.",
       };
     }
   };
@@ -72,18 +75,24 @@ export const ResultModal: FC<ResultModalProps> = ({
           {/* Score Overview */}
           <div className="grid grid-cols-2 gap-4">
             <div className="bg-gray-800 rounded-lg p-4">
-              <div className="text-3xl font-bold text-primary">{score}/{totalQuestions}</div>
+              <div className="text-3xl font-bold text-primary">
+                {score}/{totalQuestions}
+              </div>
               <div className="text-sm text-gray-400">Score</div>
             </div>
             <div className="bg-gray-800 rounded-lg p-4">
-              <div className="text-3xl font-bold text-green-500">{accuracy}%</div>
+              <div className="text-3xl font-bold text-green-500">
+                {accuracy}%
+              </div>
               <div className="text-sm text-gray-400">Accuracy</div>
             </div>
           </div>
 
           {/* Topic Analysis */}
           <div className="bg-gray-800/50 rounded-lg p-4 space-y-3">
-            <h3 className="font-semibold text-white">Topic Analysis: {topic}</h3>
+            <h3 className="font-semibold text-white">
+              Topic Analysis: {topic}
+            </h3>
             <div className={`text-lg font-medium ${analysis.color}`}>
               Status: {analysis.status}
             </div>
@@ -95,11 +104,14 @@ export const ResultModal: FC<ResultModalProps> = ({
           <div className="bg-gray-800/50 rounded-lg p-4 space-y-3">
             <h3 className="font-semibold text-white">Rank Prediction</h3>
             <div className="text-lg text-primary">
-              Based on your {topic} preparation, your estimated rank: 
-              <span className="font-bold ml-2">#{rankPrediction.toLocaleString()}</span>
+              Based on your {topic} preparation, your estimated rank:
+              <span className="font-bold ml-2">
+                #{rankPrediction.toLocaleString()}
+              </span>
             </div>
             <p className="text-gray-400 text-sm">
-              This prediction is based on your performance in {topic} and historical data patterns.
+              This prediction is based on your performance in {topic} and
+              historical data patterns.
             </p>
           </div>
 
@@ -109,7 +121,7 @@ export const ResultModal: FC<ResultModalProps> = ({
               Average Time per Question: {averageTime.toFixed(1)}s
             </div>
             <p className="text-gray-400 text-sm mt-1">
-              {averageTime < 60 
+              {averageTime < 60
                 ? "Great time management! You're solving questions efficiently."
                 : "Try to improve your speed while maintaining accuracy."}
             </p>

@@ -365,7 +365,9 @@ export const PlaygroundView: React.FC<PlaygroundViewProps> = ({
     <div className="w-full min-h-[calc(100vh-4rem)] flex flex-col">
       {!currentQuestion || sessionStats.isSessionComplete ? (
         <div className="flex-1 flex flex-col items-center justify-center px-4">
-          <h1 className="text-2xl sm:text-3xl font-thin text-center font-instrument mb-8">What do you want to <span className="italic">practice</span>?</h1>
+          <h1 className="text-2xl sm:text-3xl font-thin text-center font-instrument mb-8">
+            What do you want to <span className="italic">practice</span>?
+          </h1>
 
           <div className="w-full max-w-xl mx-auto">
             <SearchBar
@@ -481,10 +483,10 @@ export const PlaygroundView: React.FC<PlaygroundViewProps> = ({
                       selectedAnswer === null
                         ? "bg-[#1a1a1a]/90 hover:bg-[#2a2a2a]/90 border border-[#2a2a2a]"
                         : idx === currentQuestion.correctAnswer
-                        ? "bg-green-500/10 border border-green-500/20 text-green-400"
-                        : selectedAnswer === idx
-                        ? "bg-red-500/10 border border-red-500/20 text-red-400"
-                        : "bg-[#1a1a1a]/90 border border-[#2a2a2a]"
+                          ? "bg-green-500/10 border border-green-500/20 text-green-400"
+                          : selectedAnswer === idx
+                            ? "bg-red-500/10 border border-red-500/20 text-red-400"
+                            : "bg-[#1a1a1a]/90 border border-[#2a2a2a]"
                     } transition-all duration-200`}
                 >
                   <span className="inline-block w-5 sm:w-6 font-medium">

@@ -307,10 +307,14 @@ export const getTopUsers = async (limit: number = 10): Promise<UserScore[]> => {
         user_id,
         correct_answers,
         updated_at,
-        profiles:user_id (
+        user:user_id (
+          email
+        ),
+        profile:profiles!left (
           username,
           display_name,
-          email
+          email,
+          age
         )
       `
       )
@@ -318,21 +322,22 @@ export const getTopUsers = async (limit: number = 10): Promise<UserScore[]> => {
       .limit(limit);
 
     if (error) throw error;
-    console.log("Fetched scores with profiles:", scores);
+    console.log("Fetched scores:", scores);
 
-    return scores.map((score) => {
-      const profile = score.profiles;
-      return {
-        ...score,
-        profile: profile || {
-          id: score.user_id,
-          age: 0,
-          username: "Anonymous",
-          display_name: "Anonymous User",
-          email: "",
-        },
-      };
-    });
+    return scores.map((score) => ({
+      ...score,
+      profile: score.profile || {
+        id: score.user_id,
+        age: 0,
+        username:
+          score.user?.email?.split("@")[0] ||
+          `User_${score.user_id.slice(0, 8)}`,
+        display_name:
+          score.user?.email?.split("@")[0] ||
+          `User_${score.user_id.slice(0, 8)}`,
+        email: score.user?.email || "",
+      },
+    }));
   } catch (error) {
     console.error("Error in getTopUsers:", error);
     return [];
@@ -528,7 +533,7 @@ function calculateNewDifficulty(
   const minDifficulty = 1;
   const step = 0.5;
 
-  let newDifficulty = currentDifficulty + (wasCorrect ? step : -step);
+  const newDifficulty = currentDifficulty + (wasCorrect ? step : -step);
   return Math.min(Math.max(newDifficulty, minDifficulty), maxDifficulty);
 }
 

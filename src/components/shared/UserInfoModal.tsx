@@ -1,6 +1,6 @@
 // src/components/shared/UserInfoModal.tsx
-import React, { useState } from 'react';
-import { X } from 'lucide-react';
+import React, { useState } from "react";
+import { X } from "lucide-react";
 
 interface UserInfoModalProps {
   isOpen: boolean;
@@ -14,11 +14,15 @@ interface UserInfo {
   studyingFor: string;
 }
 
-export const UserInfoModal = ({ isOpen, onClose, onSubmit }: UserInfoModalProps) => {
+export const UserInfoModal = ({
+  isOpen,
+  onClose,
+  onSubmit,
+}: UserInfoModalProps) => {
   const [userInfo, setUserInfo] = useState<UserInfo>({
     age: 0,
-    location: '',
-    studyingFor: ''
+    location: "",
+    studyingFor: "",
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -48,8 +52,13 @@ export const UserInfoModal = ({ isOpen, onClose, onSubmit }: UserInfoModalProps)
             </label>
             <input
               type="number"
-              value={userInfo.age || ''}
-              onChange={(e) => setUserInfo(prev => ({ ...prev, age: parseInt(e.target.value) }))}
+              value={userInfo.age || ""}
+              onChange={(e) =>
+                setUserInfo((prev) => ({
+                  ...prev,
+                  age: parseInt(e.target.value),
+                }))
+              }
               className="input w-full"
               placeholder="Enter your age"
               required
@@ -63,7 +72,9 @@ export const UserInfoModal = ({ isOpen, onClose, onSubmit }: UserInfoModalProps)
             <input
               type="text"
               value={userInfo.location}
-              onChange={(e) => setUserInfo(prev => ({ ...prev, location: e.target.value }))}
+              onChange={(e) =>
+                setUserInfo((prev) => ({ ...prev, location: e.target.value }))
+              }
               className="input w-full"
               placeholder="Enter your city/country"
               required
@@ -76,7 +87,12 @@ export const UserInfoModal = ({ isOpen, onClose, onSubmit }: UserInfoModalProps)
             </label>
             <select
               value={userInfo.studyingFor}
-              onChange={(e) => setUserInfo(prev => ({ ...prev, studyingFor: e.target.value }))}
+              onChange={(e) =>
+                setUserInfo((prev) => ({
+                  ...prev,
+                  studyingFor: e.target.value,
+                }))
+              }
               className="input w-full"
               required
             >

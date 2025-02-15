@@ -1,4 +1,3 @@
-
 export interface UserContext {
   age: number;
   location?: string;
@@ -20,7 +19,7 @@ export interface ExploreResponse {
 
 export interface RelatedTopic {
   query: string;
-  type: 'prerequisite' | 'extension' | 'application' | 'parallel' | 'deeper';
+  type: "prerequisite" | "extension" | "application" | "parallel" | "deeper";
   context: string;
 }
 
@@ -47,7 +46,7 @@ export interface SearchBarProps {
     text: string;
     icon: string;
   }>;
-  buttonText?: string; 
+  buttonText?: string;
   initialValue?: string;
   onSubmit?: (query: string) => void;
 }
@@ -70,4 +69,4 @@ export interface MarkdownComponentProps {
   [key: string]: any;
 }
 
-// Add other shared types here 
+// Add other shared types here

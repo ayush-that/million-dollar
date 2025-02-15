@@ -7,7 +7,19 @@ export interface MarkdownComponentProps {
   [key: string]: any;
 }
 
-export interface Question {
+export interface Topic {
+  topic: string;
+  type: "prerequisite" | "extension" | "application" | "parallel" | "deeper";
+  reason: string;
+}
+
+export interface RelatedQuestion {
+  question: string;
+  type: "curiosity" | "mechanism" | "causality" | "innovation" | "insight";
+  context: string;
+}
+
+export interface QuizQuestion {
   text: string;
   options: string[];
   correctAnswer: number;
@@ -20,6 +32,12 @@ export interface Question {
   subtopic: string;
   questionType: string;
   ageGroup: string;
+}
+
+export interface StreamChunk {
+  text?: string;
+  topics?: Topic[];
+  questions?: RelatedQuestion[];
 }
 
 export interface ExploreResponse {
@@ -43,4 +61,4 @@ declare global {
   interface Window {
     dataLayer: any[];
   }
-} 
+}

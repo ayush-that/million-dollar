@@ -17,12 +17,12 @@ export const QuestionCard = ({
   correctAnswer,
   onAnswer,
   showExplanation,
-  disabled
+  disabled,
 }: QuestionCardProps) => {
   return (
     <div className="card space-y-6">
       <h2 className="text-xl font-medium">{question.text}</h2>
-      
+
       <div className="space-y-3">
         {question.options.map((option, idx) => (
           <button
@@ -30,17 +30,17 @@ export const QuestionCard = ({
             onClick={() => onAnswer(idx)}
             disabled={disabled || selectedAnswer !== null}
             className={`option-button ${
-              selectedAnswer === null 
-                ? ''
+              selectedAnswer === null
+                ? ""
                 : correctAnswer !== undefined
                   ? idx === correctAnswer
-                    ? 'correct'
+                    ? "correct"
                     : selectedAnswer === idx
-                      ? 'incorrect'
-                      : ''
+                      ? "incorrect"
+                      : ""
                   : selectedAnswer === idx
-                    ? 'bg-primary/20 border-primary'
-                    : ''
+                    ? "bg-primary/20 border-primary"
+                    : ""
             }`}
           >
             {String.fromCharCode(65 + idx)}. {option}
@@ -49,11 +49,13 @@ export const QuestionCard = ({
       </div>
 
       {showExplanation && question.explanation && selectedAnswer !== null && (
-        <div className={`p-4 rounded-lg ${
-          selectedAnswer === correctAnswer
-            ? 'bg-success/20 text-success'
-            : 'bg-error/20 text-error'
-        }`}>
+        <div
+          className={`p-4 rounded-lg ${
+            selectedAnswer === correctAnswer
+              ? "bg-success/20 text-success"
+              : "bg-error/20 text-error"
+          }`}
+        >
           <p>{question.explanation}</p>
         </div>
       )}
