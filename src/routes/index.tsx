@@ -4,6 +4,7 @@ import {
   createRouter,
   Outlet,
   redirect,
+  useRouter,
 } from "@tanstack/react-router";
 import { ExploreView } from "../components/Explore/ExploreView";
 import { PlaygroundView } from "../components/Playground/PlaygroundView";
@@ -132,7 +133,26 @@ export const leaderboardRoute = createRoute({
 export const prefillRoute = createRoute({
   getParentRoute: () => protectedLayoutRoute,
   path: "/prefill",
-  component: PreFillForm,
+  component: () => {
+    const { user } = useAuth();
+    const router = useRouter();
+
+    if (!user) {
+      throw redirect({
+        to: "/login",
+      });
+    }
+
+    return (
+      <PreFillForm
+        userId={user.id}
+        onSubmit={(context) => {
+          // After collecting age, redirect to explore
+          router.navigate({ to: "/explore" });
+        }}
+      />
+    );
+  },
 });
 
 // Create the route tree

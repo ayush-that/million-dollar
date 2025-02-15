@@ -359,49 +359,59 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
         setMessages((prev) => [...prev, userMessage]);
 
         // Stream the AI response
+        let currentAiMessage = {
+          type: "ai" as const,
+          content: "",
+          topics: undefined,
+          questions: undefined,
+        };
+
+        let isFirstChunk = true;
+
         await gptService.streamExploreContent(
           query,
           userContext,
           async (chunk: StreamChunk) => {
             if (chunk.text || chunk.topics || chunk.questions) {
-              const aiMessage = {
-                type: "ai" as const,
-                content: chunk.text || "",
-                topics: chunk.topics,
-                questions: chunk.questions,
-              };
-
-              setMessages((prev) => {
-                const newMessages = [...prev];
-                const lastMessage = newMessages[newMessages.length - 1];
-
-                if (lastMessage && lastMessage.type === "ai") {
-                  // Update existing AI message
-                  newMessages[newMessages.length - 1] = {
-                    ...lastMessage,
-                    content: chunk.text || lastMessage.content || "",
-                    topics: chunk.topics || lastMessage.topics,
-                    questions: chunk.questions || lastMessage.questions,
-                  };
-                } else {
-                  // Add new AI message
-                  newMessages.push(aiMessage);
-                }
-
-                return newMessages;
-              });
-
-              // Save the AI message to the database
-              if (
-                sessionId &&
-                (chunk.text || chunk.topics || chunk.questions)
-              ) {
-                await saveChatMessage(user.id, sessionId, {
+              // For first chunk, create new message
+              if (isFirstChunk) {
+                currentAiMessage = {
                   type: "ai",
                   content: chunk.text || "",
                   topics: chunk.topics,
                   questions: chunk.questions,
+                };
+                isFirstChunk = false;
+                setMessages((prev) => [...prev, currentAiMessage]);
+              } else {
+                // For subsequent chunks, only update if there's new content
+                if (chunk.text) {
+                  currentAiMessage = {
+                    ...currentAiMessage,
+                    content: chunk.text,
+                  };
+                }
+                if (chunk.topics || chunk.questions) {
+                  currentAiMessage = {
+                    ...currentAiMessage,
+                    topics: chunk.topics || currentAiMessage.topics,
+                    questions: chunk.questions || currentAiMessage.questions,
+                  };
+                }
+
+                // Update UI
+                setMessages((prev) => {
+                  const newMessages = [...prev];
+                  if (newMessages[newMessages.length - 1]?.type === "ai") {
+                    newMessages[newMessages.length - 1] = currentAiMessage;
+                  }
+                  return newMessages;
                 });
+              }
+
+              // Only save to database when we have a complete message (with topics or questions)
+              if (sessionId && (chunk.topics || chunk.questions)) {
+                await saveChatMessage(user.id, sessionId, currentAiMessage);
               }
             }
           }

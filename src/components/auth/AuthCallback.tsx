@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "@tanstack/react-router";
 import { supabase } from "../../lib/supabase/client";
+import { getProfile } from "../../lib/supabase/db";
 
 export const AuthCallback = () => {
   const router = useRouter();
@@ -10,7 +11,7 @@ export const AuthCallback = () => {
     const handleAuthCallback = async () => {
       try {
         const { error: sessionError } = await supabase.auth.getSession();
-        
+
         if (sessionError) {
           console.error("Error during auth callback:", sessionError);
           setError(sessionError.message);
@@ -19,18 +20,32 @@ export const AuthCallback = () => {
         }
 
         // Get the current user to ensure the session is valid
-        const { error: userError } = await supabase.auth.getUser();
-        if (userError) {
+        const {
+          data: { user },
+          error: userError,
+        } = await supabase.auth.getUser();
+        if (userError || !user) {
           console.error("Error getting user:", userError);
-          setError(userError.message);
+          setError(userError?.message || "Could not get user");
           setTimeout(() => router.navigate({ to: "/login" }), 2000);
           return;
         }
 
-        router.navigate({ to: "/explore" });
+        // Check if user has completed their profile
+        const profile = await getProfile(user.id);
+
+        if (!profile?.age) {
+          // User hasn't set their age, redirect to prefill form
+          router.navigate({ to: "/prefill" });
+        } else {
+          // User has completed their profile, redirect to explore
+          router.navigate({ to: "/explore" });
+        }
       } catch (err) {
         console.error("Unexpected error during auth callback:", err);
-        setError(err instanceof Error ? err.message : "An unexpected error occurred");
+        setError(
+          err instanceof Error ? err.message : "An unexpected error occurred"
+        );
         setTimeout(() => router.navigate({ to: "/login" }), 2000);
       }
     };
