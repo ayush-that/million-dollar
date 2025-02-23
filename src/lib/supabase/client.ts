@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { getAppUrl } from "../utils";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -12,6 +13,8 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: true,
+    flowType: "pkce",
+    redirectTo: `${getAppUrl()}/auth/callback`,
   },
   realtime: {
     params: {
@@ -21,15 +24,18 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 });
 
 // Auth helper functions
-export const signUp = async (email: string, password: string) => {
+export const signUpWithEmail = async (email: string, password: string) => {
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
+    options: {
+      emailRedirectTo: `${getAppUrl()}/auth/callback`,
+    },
   });
   return { data, error };
 };
 
-export const signIn = async (email: string, password: string) => {
+export const signInWithEmail = async (email: string, password: string) => {
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password,
@@ -58,6 +64,18 @@ export const signInWithGoogle = async () => {
     },
   });
   return { data, error };
+};
+
+export const resetPassword = async (email: string) => {
+  return await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${getAppUrl()}/auth/callback`,
+  });
+};
+
+export const updatePassword = async (newPassword: string) => {
+  return await supabase.auth.updateUser({
+    password: newPassword,
+  });
 };
 
 // Auth state change listener

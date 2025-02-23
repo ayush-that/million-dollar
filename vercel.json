@@ -1,0 +1,12 @@
+{
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ],
+  "env": {
+    "VITE_APP_URL": "https://million-dollar-chi.vercel.app",
+    "VITE_PROD_URL": "https://million-dollar-chi.vercel.app"
+  }
+} 
