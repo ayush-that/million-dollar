@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import type { Database } from "../../lib/types/supabase";
 import { getAppUrl } from "../utils";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -8,26 +9,35 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error("Missing Supabase environment variables");
 }
 
-const supabaseOptions = {
-  auth: {
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: true,
-    flowType: "pkce",
-    redirectTo: `${getAppUrl()}/auth/callback`,
-  },
-  realtime: {
-    params: {
-      eventsPerSecond: 10,
-    },
-  },
-};
+class SupabaseClient {
+  private static instance: ReturnType<typeof createClient<Database>>;
 
-export const supabase = createClient(
-  supabaseUrl,
-  supabaseAnonKey,
-  supabaseOptions
-);
+  private static createInstance() {
+    return createClient<Database>(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: true,
+        flowType: "pkce",
+        storage: window.localStorage,
+      },
+      realtime: {
+        params: {
+          eventsPerSecond: 10,
+        },
+      },
+    });
+  }
+
+  public static getInstance() {
+    if (!SupabaseClient.instance) {
+      SupabaseClient.instance = SupabaseClient.createInstance();
+    }
+    return SupabaseClient.instance;
+  }
+}
+
+export const supabase = SupabaseClient.getInstance();
 
 // Auth helper functions
 export const signUpWithEmail = async (email: string, password: string) => {
