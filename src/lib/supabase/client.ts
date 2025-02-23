@@ -8,7 +8,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error("Missing Supabase environment variables");
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+const supabaseOptions = {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
@@ -21,7 +21,13 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
       eventsPerSecond: 10,
     },
   },
-});
+};
+
+export const supabase = createClient(
+  supabaseUrl,
+  supabaseAnonKey,
+  supabaseOptions
+);
 
 // Auth helper functions
 export const signUpWithEmail = async (email: string, password: string) => {
@@ -57,10 +63,15 @@ export const getCurrentUser = async () => {
 };
 
 export const signInWithGoogle = async () => {
+  const redirectTo =
+    window.location.hostname === "localhost"
+      ? `${window.location.origin}/auth/callback`
+      : "https://million-dollar-chi.vercel.app/auth/callback";
+
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
-      redirectTo: `${window.location.origin}/auth/callback`,
+      redirectTo,
     },
   });
   return { data, error };
