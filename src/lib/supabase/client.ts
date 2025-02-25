@@ -10,9 +10,13 @@ if (!supabaseUrl || !supabaseAnonKey) {
 }
 
 // Create a single supabase client for interacting with your database
-// Using a browser-safe initialization pattern
-const createSupabaseClient = () => {
-  return createClient<Database>(supabaseUrl, supabaseAnonKey, {
+// Using a safer initialization pattern to avoid the 'M' error
+let supabaseInstance: ReturnType<typeof createClient<Database>> | null = null;
+
+export const supabase = (() => {
+  if (supabaseInstance) return supabaseInstance;
+
+  supabaseInstance = createClient<Database>(supabaseUrl, supabaseAnonKey, {
     auth: {
       autoRefreshToken: true,
       persistSession: true,
@@ -25,10 +29,9 @@ const createSupabaseClient = () => {
       },
     },
   });
-};
 
-// Export the client
-export const supabase = createSupabaseClient();
+  return supabaseInstance;
+})();
 
 // Auth helper functions
 export const signUpWithEmail = async (email: string, password: string) => {
