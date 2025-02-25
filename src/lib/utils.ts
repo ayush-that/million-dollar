@@ -6,6 +6,19 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export const getAppUrl = () => {
-  const isProd = window.location.hostname !== 'localhost';
-  return isProd ? import.meta.env.VITE_PROD_URL : import.meta.env.VITE_APP_URL;
+  // Check if we're in a browser environment
+  const isBrowser = typeof window !== "undefined";
+
+  if (isBrowser) {
+    // Browser environment
+    const isProd =
+      window.location.hostname !== "localhost" &&
+      !window.location.hostname.includes("127.0.0.1");
+    return isProd
+      ? "https://million-dollar-chi.vercel.app"
+      : window.location.origin;
+  } else {
+    // Server environment
+    return "https://million-dollar-chi.vercel.app";
+  }
 };

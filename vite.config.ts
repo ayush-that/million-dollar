@@ -4,9 +4,19 @@ import path from "path";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, process.cwd(), '');
+  const env = loadEnv(mode, process.cwd(), "");
+  const isProd = mode === "production";
+  const base = isProd ? "/" : "/";
+
   return {
-    base: mode === 'production' ? 'https://million-dollar-chi.vercel.app' : '/',
+    base,
+    define: {
+      __APP_BASE_URL__: JSON.stringify(
+        isProd
+          ? "https://million-dollar-chi.vercel.app"
+          : "http://localhost:3000"
+      ),
+    },
     plugins: [react()],
     server: {
       port: 3000,

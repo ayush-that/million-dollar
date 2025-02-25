@@ -9,35 +9,26 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error("Missing Supabase environment variables");
 }
 
-class SupabaseClient {
-  private static instance: ReturnType<typeof createClient<Database>>;
-
-  private static createInstance() {
-    return createClient<Database>(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        autoRefreshToken: true,
-        persistSession: true,
-        detectSessionInUrl: true,
-        flowType: "pkce",
-        storage: window.localStorage,
+// Create a single supabase client for interacting with your database
+// Using a browser-safe initialization pattern
+const createSupabaseClient = () => {
+  return createClient<Database>(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: true,
+      flowType: "pkce",
+    },
+    realtime: {
+      params: {
+        eventsPerSecond: 10,
       },
-      realtime: {
-        params: {
-          eventsPerSecond: 10,
-        },
-      },
-    });
-  }
+    },
+  });
+};
 
-  public static getInstance() {
-    if (!SupabaseClient.instance) {
-      SupabaseClient.instance = SupabaseClient.createInstance();
-    }
-    return SupabaseClient.instance;
-  }
-}
-
-export const supabase = SupabaseClient.getInstance();
+// Export the client
+export const supabase = createSupabaseClient();
 
 // Auth helper functions
 export const signUpWithEmail = async (email: string, password: string) => {
@@ -73,15 +64,13 @@ export const getCurrentUser = async () => {
 };
 
 export const signInWithGoogle = async () => {
-  const redirectTo =
-    window.location.hostname === "localhost"
-      ? `${window.location.origin}/auth/callback`
-      : "https://million-dollar-chi.vercel.app/auth/callback";
+  const redirectUrl = `${getAppUrl()}/auth/callback`;
+  console.log("Redirecting to:", redirectUrl);
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
-      redirectTo,
+      redirectTo: redirectUrl,
     },
   });
   return { data, error };
