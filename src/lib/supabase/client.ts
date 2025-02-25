@@ -11,27 +11,27 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 // Create a single supabase client for interacting with your database
 // Using a safer initialization pattern to avoid the 'M' error
-let supabaseInstance: ReturnType<typeof createClient<Database>> | null = null;
-
-export const supabase = (() => {
-  if (supabaseInstance) return supabaseInstance;
-
-  supabaseInstance = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+const createBrowserClient = () => {
+  const options = {
     auth: {
       autoRefreshToken: true,
       persistSession: true,
       detectSessionInUrl: true,
-      flowType: "pkce",
+      flowType: "pkce" as const,
     },
     realtime: {
       params: {
         eventsPerSecond: 10,
       },
     },
-  });
+  };
 
-  return supabaseInstance;
-})();
+  return createClient<Database>(supabaseUrl, supabaseAnonKey, options);
+};
+
+// Create a singleton instance
+const browserClient = createBrowserClient();
+export const supabase = browserClient;
 
 // Auth helper functions
 export const signUpWithEmail = async (email: string, password: string) => {
