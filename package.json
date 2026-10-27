@@ -43,7 +43,7 @@
     "framer-motion": "^12.0.6",
     "lodash": "^4.17.21",
     "lucide-react": "^0.473.0",
-    "next": "15.1.11",
+    "next": "15.5.28",
     "openai": "^4.83.0",
     "path-to-regexp": "^6.2.3",
     "react": "^18.3.1",
